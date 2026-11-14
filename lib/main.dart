@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'services/tdlib_service.dart';
+import 'services/local_message_archive.dart';
 import 'screens/telegram_connect_page.dart';
 import 'screens/chats_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await TdlibService.instance.initialize();
+  await LocalMessageArchive.instance.initialize();
+  LocalMessageArchive.instance.attach(TdlibService.instance.events);
   runApp(const DarkTgApp());
 }
 
