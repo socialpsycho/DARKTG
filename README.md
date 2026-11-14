@@ -8,14 +8,15 @@ This repository contains an early UI prototype with:
 - DARKTG settings sections for privacy, appearance and tools
 - A GitHub Actions workflow that builds an Android debug APK
 
-**Telegram sign-in and message sync are not implemented yet.** The Android app now initializes a community-maintained TDLib binding and creates a client ID, but it does not authenticate an account or receive updates. The current chat list remains prototype content.
+**Telegram sign-in and message sync are not yet verified end-to-end.** The Android app now starts a background TDLib worker, receives TDLib JSON updates, and includes an in-app authorization screen for API ID/hash, phone number, login code and optional 2FA password. A successful build does not prove that Telegram authorization works on a device; chat synchronization and live messaging remain unfinished.
 
 ## Telegram integration status
 - Android: initial TDLib engine bridge added with `handy_tdlib_next` (TDLib 1.8.36).
-- Account authorization, update receiving, chat synchronization and local message-history storage are still pending.
+- Background TDLib receive loop and an authorization UI/request flow have been added; device-level sign-in still needs testing.
+- Chat synchronization, live message send/receive, and local message-history storage are still pending.
 - The selected Flutter binding currently declares Android support only; iOS needs a separately built and linked TDLib native library.
 
-## Build
+## Security notes\n- API ID/hash are entered at runtime and are not committed to the repository. Never share login codes or 2FA passwords in chat or GitHub.\n- TDLib session data is stored in the app-private support directory on the device.\n\n## Build
 The Android APK workflow runs on pushes to `main` and can also be started manually from the Actions tab. It uploads an artifact named `darktg-debug-apk`.
 
 ## Roadmap
