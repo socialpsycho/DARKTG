@@ -62,8 +62,8 @@ class _GhostModeSettingsPageState extends State<GhostModeSettingsPage> {
           ),
           SwitchListTile(
             secondary: const Icon(Icons.keyboard),
-            title: const Text('Скрывать набор текста'),
-            subtitle: const Text('Блокировать отправку sendChatAction с typing.'),
+            title: const Text('Скрывать набор текста и загрузки'),
+            subtitle: const Text('Блокировать sendChatAction для набора текста и индикаторов загрузки.'),
             value: _ghost.hideTyping,
             onChanged: _busy ? null : (v) => _change(() => _ghost.setHideTyping(v)),
           ),
