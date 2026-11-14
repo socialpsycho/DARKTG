@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'services/tdlib_service.dart';
+import 'screens/telegram_connect_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -191,6 +192,14 @@ class SettingsPage extends StatelessWidget {
           trailing: Icon(Icons.chevron_right, color: Colors.white38),
         ),
         const Divider(height: 24),
+        _SettingTile(
+          icon: Icons.link,
+          title: 'Подключить Telegram',
+          subtitle: 'Вход в аккаунт и синхронизация',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const TelegramConnectPage()),
+          ),
+        ),
         _SettingTile(
           icon: Icons.notifications_none,
           title: 'Уведомления и звуки',
