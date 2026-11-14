@@ -79,6 +79,16 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
       final id = event['message_id'];
       final index = _messages.indexWhere((m) => m['id'] == id);
       if (index >= 0) setState(() => _messages[index]['content'] = event['new_content']);
+    } else if (type == 'updateDeleteMessages' && event['chat_id'] == widget.chatId) {
+      final ids = event['message_ids'];
+      if (ids is List) {
+        setState(() {
+          for (final id in ids.whereType<int>()) {
+            final index = _messages.indexWhere((m) => m['id'] == id);
+            if (index >= 0) _messages[index]['_darktg_deleted'] = true;
+          }
+        });
+      }
     } else if (type == 'error') {
       setState(() { _sending = false; _loading = false; _error = event['message']?.toString(); });
     }
@@ -187,7 +197,18 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                                 bottomRight: Radius.circular(outgoing ? 5 : 17),
                               ),
                             ),
-                            child: Text(_messageText(message)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(_messageText(message)),
+                                if (message['_darktg_deleted'] == true) ...[
+                                  const SizedBox(height: 4),
+                                  const Text('Сохранено DARKTG · удалено в Telegram',
+                                    style: TextStyle(fontSize: 10, color: Colors.orangeAccent)),
+                                ],
+                              ],
+                            ),
                           ),
                         );
                       },
