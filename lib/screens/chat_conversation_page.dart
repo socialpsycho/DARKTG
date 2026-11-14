@@ -81,7 +81,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     } else if (type == 'updateMessageContent' && event['chat_id'] == widget.chatId) {
       final id = event['message_id'];
       final index = _messages.indexWhere((m) => m['id'] == id);
-      if (index >= 0) setState(() => _messages[index]['content'] = event['new_content']);
+      if (index >= 0) setState(() {
+        _messages[index]['content'] = event['new_content'];
+        _messages[index]['_darktg_edited'] = true;
+      });
     } else if (type == 'updateDeleteMessages' && event['chat_id'] == widget.chatId) {
       final ids = event['message_ids'];
       if (ids is List) {
@@ -235,6 +238,11 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(_messageText(message)),
+                                if (message['_darktg_edited'] == true || (message['edit_date'] is int && message['edit_date'] > 0)) ...[
+                                  const SizedBox(height: 4),
+                                  const Text('Изменено · история версий сохранена',
+                                    style: TextStyle(fontSize: 10, color: Colors.white60)),
+                                ],
                                 if (message['_darktg_deleted'] == true) ...[
                                   const SizedBox(height: 4),
                                   const Text('Сохранено DARKTG · удалено в Telegram',
