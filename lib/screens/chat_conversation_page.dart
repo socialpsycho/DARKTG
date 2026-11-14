@@ -19,6 +19,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   StreamSubscription<Map<String, dynamic>>? _subscription;
   bool _loading = true;
   bool _sending = false;
+  DateTime? _lastTypingAction;
   String? _error;
 
   @override
@@ -56,6 +57,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           _messages.sort((a, b) => ((a['date'] as int?) ?? 0).compareTo((b['date'] as int?) ?? 0));
           _loading = false;
         });
+        _markMessagesRead(_messages);
         _scrollToBottom();
       }
     } else if (type == 'updateNewMessage') {
@@ -73,6 +75,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           }
           _sending = false;
         });
+        if (message['is_outgoing'] != true) _markMessagesRead([Map<String, dynamic>.from(message)]);
         _scrollToBottom();
       }
     } else if (type == 'updateMessageContent' && event['chat_id'] == widget.chatId) {
@@ -117,6 +120,36 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
     if (type == 'messageDocument') return '📎 Файл';
     if (type == 'messageSticker') return 'Стикер';
     return 'Сообщение';
+  }
+
+  void _markMessagesRead(List<Map<String, dynamic>> messages) {
+    final ids = messages
+        .where((message) => message['is_outgoing'] != true && message['id'] is int)
+        .map((message) => message['id'] as int)
+        .toList();
+    if (ids.isEmpty) return;
+    try {
+      TdlibService.instance.sendRawRequest({
+        '@type': 'viewMessages',
+        'chat_id': widget.chatId,
+        'message_ids': ids,
+        'force_read': false,
+      });
+    } catch (_) {}
+  }
+
+  void _sendTypingAction() {
+    final now = DateTime.now();
+    if (_lastTypingAction != null &&
+        now.difference(_lastTypingAction!) < const Duration(seconds: 4)) return;
+    _lastTypingAction = now;
+    try {
+      TdlibService.instance.sendRawRequest({
+        '@type': 'sendChatAction',
+        'chat_id': widget.chatId,
+        'action': {'@type': 'chatActionTyping'},
+      });
+    } catch (_) {}
   }
 
   void _send() {
@@ -232,6 +265,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 ),
+                onChanged: (_) => _sendTypingAction(),
                 onSubmitted: (_) => _send(),
               )),
               const SizedBox(width: 8),
