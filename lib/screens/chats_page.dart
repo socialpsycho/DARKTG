@@ -70,8 +70,8 @@ class _ChatsPageState extends State<ChatsPage> {
         }
         setState(() => _loading = false);
       }
-    } else if (type == 'updateNewChat') {
-      final chat = event['chat'];
+    } else if (type == 'chat' || type == 'updateNewChat') {
+      final chat = type == 'chat' ? event : event['chat'];
       if (chat is Map && chat['id'] is int) {
         setState(() {
           _chats[chat['id'] as int] = Map<String, dynamic>.from(chat);
