@@ -50,6 +50,18 @@ class LocalMessageArchive {
     if (!_initialized) await initialize();
     final type = event['@type'];
 
+    if (type == 'messages') {
+      final messages = event['messages'];
+      var changed = false;
+      if (messages is List) {
+        for (final item in messages) {
+          if (item is Map) changed = _storeMessage(item) || changed;
+        }
+      }
+      if (changed) await _persist();
+      return;
+    }
+
     if (type == 'updateNewMessage') {
       final message = event['message'];
       if (message is Map) {
@@ -57,17 +69,7 @@ class LocalMessageArchive {
         final chatId = value['chat_id'];
         final messageId = value['id'];
         if (chatId is int && messageId is int) {
-          final key = _key(chatId, messageId);
-          _records.putIfAbsent(key, () => {
-            'key': key,
-            'chat_id': chatId,
-            'message_id': messageId,
-            'first_seen_at': DateTime.now().millisecondsSinceEpoch,
-            'revisions': <dynamic>[],
-          });
-          _records[key]!['message'] = value;
-          _records[key]!['last_seen_at'] =
-              DateTime.now().millisecondsSinceEpoch;
+          _storeMessage(value);
           await _persist();
         }
       }
@@ -122,6 +124,24 @@ class LocalMessageArchive {
       ..sort((a, b) => ((a['first_seen_at'] as int?) ?? 0)
           .compareTo((b['first_seen_at'] as int?) ?? 0));
     return result;
+  }
+
+  bool _storeMessage(Map message) {
+    final value = Map<String, dynamic>.from(message);
+    final chatId = value['chat_id'];
+    final messageId = value['id'];
+    if (chatId is! int || messageId is! int) return false;
+    final key = _key(chatId, messageId);
+    _records.putIfAbsent(key, () => {
+      'key': key,
+      'chat_id': chatId,
+      'message_id': messageId,
+      'first_seen_at': DateTime.now().millisecondsSinceEpoch,
+      'revisions': <dynamic>[],
+    });
+    _records[key]!['message'] = value;
+    _records[key]!['last_seen_at'] = DateTime.now().millisecondsSinceEpoch;
+    return true;
   }
 
   String _key(int chatId, int messageId) => '$chatId:$messageId';
