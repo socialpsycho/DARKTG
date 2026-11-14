@@ -5,6 +5,7 @@ import 'services/local_message_archive.dart';
 import 'services/ghost_mode_service.dart';
 import 'screens/telegram_connect_page.dart';
 import 'screens/chats_page.dart';
+import 'screens/ghost_mode_settings_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -229,13 +230,10 @@ class DarkTgSettingsPage extends StatefulWidget {
 class _DarkTgSettingsPageState extends State<DarkTgSettingsPage> {
   // These switches currently control prototype UI state only.
   // Telegram-side behavior will be connected after the client API integration.
-  bool ghostMode = false;
   bool saveHistory = true;
   bool translate = false;
   bool voiceEffects = false;
   bool appLock = false;
-  bool showOnlineStatus = true;
-  bool showTypingStatus = true;
 
   Widget _switchTile({
     required IconData icon,
@@ -285,29 +283,15 @@ class _DarkTgSettingsPageState extends State<DarkTgSettingsPage> {
             ),
           ),
           const _SectionTitle('ПРИВАТНОСТЬ'),
-          _switchTile(
-            icon: Icons.visibility_off_outlined,
-            title: 'Ghost Mode',
-            subtitle: 'Общий переключатель режима',
-            value: ghostMode,
-            onChanged: (value) => setState(() => ghostMode = value),
+          ListTile(
+            leading: const Icon(Icons.visibility_off_outlined, color: accent),
+            title: const Text('Ghost Mode'),
+            subtitle: const Text('Скрытие прочтения, набора текста и онлайн-сигнала'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const GhostModeSettingsPage()),
+            ),
           ),
-          if (ghostMode) ...[
-            _switchTile(
-              icon: Icons.circle_outlined,
-              title: 'Показывать статус «в сети»',
-              subtitle: 'Настройка интерфейса статуса',
-              value: showOnlineStatus,
-              onChanged: (value) => setState(() => showOnlineStatus = value),
-            ),
-            _switchTile(
-              icon: Icons.keyboard_outlined,
-              title: 'Показывать набор текста',
-              subtitle: 'Настройка индикатора набора',
-              value: showTypingStatus,
-              onChanged: (value) => setState(() => showTypingStatus = value),
-            ),
-          ],
           _switchTile(
             icon: Icons.history,
             title: 'История сообщений',
