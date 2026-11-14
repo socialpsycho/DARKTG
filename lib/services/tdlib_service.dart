@@ -71,7 +71,19 @@ class TdlibService {
     } else if (type == 'update' && message['raw'] is String) {
       try {
         final decoded = jsonDecode(message['raw'] as String);
-        if (decoded is Map<String, dynamic>) _events.add(decoded);
+        if (decoded is Map<String, dynamic>) {
+          _events.add(decoded);
+          final auth = decoded['authorization_state'];
+          if (decoded['@type'] == 'updateAuthorizationState' &&
+              auth is Map && auth['@type'] == 'authorizationStateReady' &&
+              GhostModeService.instance.hideOnlineStatus && isReady) {
+            sendRawRequest({
+              '@type': 'setOption',
+              'name': 'online',
+              'value': {'@type': 'optionValueBoolean', 'value': false},
+            });
+          }
+        }
       } catch (_) {}
     }
   }
