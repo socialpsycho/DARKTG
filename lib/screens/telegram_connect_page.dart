@@ -66,6 +66,7 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
       final state = event['authorization_state'];
       final type = state is Map ? state['@type']?.toString() : null;
       setState(() {
+        _busy = false;
         switch (type) {
           case 'authorizationStateWaitTdlibParameters':
             _step = 'credentials';
@@ -104,14 +105,14 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
     }
   }
 
-  void _configure() {
+  Future<void> _configure() async {
     final id = int.tryParse(_apiId.text.trim());
     if (id == null || _apiHash.text.trim().isEmpty) {
       setState(() => _message = 'Проверьте API ID и API Hash.');
       return;
     }
     try {
-      TdlibService.instance.configure(
+      await TdlibService.instance.configure(
         apiId: id,
         apiHash: _apiHash.text,
         systemLanguageCode: 'ru',
