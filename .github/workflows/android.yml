@@ -30,6 +30,9 @@ jobs:
       - name: Generate Android platform files
         run: flutter create . --platforms=android --project-name darktg
 
+      - name: Apply DARKTG app icon and branding
+        run: bash tool/setup_android_brand.sh
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -37,7 +40,13 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Build debug APK
-        run: flutter build apk --debug
+        env:
+          DARKTG_API_ID: ${{ secrets.DARKTG_API_ID }}
+          DARKTG_API_HASH: ${{ secrets.DARKTG_API_HASH }}
+        run: |
+          flutter build apk --debug \
+            --dart-define=DARKTG_API_ID="$DARKTG_API_ID" \
+            --dart-define=DARKTG_API_HASH="$DARKTG_API_HASH"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
