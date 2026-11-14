@@ -7,8 +7,10 @@
 - [ ] Responsive polish and accessibility review
 
 ## Phase 2 — Telegram connectivity
-- [ ] Select a supported Telegram client integration (TDLib or another officially supported option)
-- [ ] Implement secure authentication
+- [x] Select TDLib JSON integration for the Android prototype
+- [x] Add the Android TDLib engine bootstrap and client ID bridge
+- [ ] Implement secure authentication without committing API credentials
+- [ ] Add a background update receiver and authorization-state handling
 - [ ] Load chats, contacts and message history
 - [ ] Handle session data securely on-device
 
