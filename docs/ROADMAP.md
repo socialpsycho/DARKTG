@@ -9,8 +9,8 @@
 ## Phase 2 — Telegram connectivity
 - [x] Select TDLib JSON integration for the Android prototype
 - [x] Add the Android TDLib engine bootstrap and client ID bridge
-- [ ] Implement secure authentication without committing API credentials
-- [ ] Add a background update receiver and authorization-state handling
+- [x] Add in-app authentication UI and TDLib request methods (device verification pending)\n- [ ] Verify secure authentication end-to-end on an Android device
+- [x] Add a background TDLib receive worker and authorization-state event handling
 - [ ] Load chats, contacts and message history
 - [ ] Handle session data securely on-device
 
