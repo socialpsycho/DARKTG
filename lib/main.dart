@@ -10,9 +10,9 @@ Future<void> main() async {
   runApp(const DarkTgApp());
 }
 
-const Color darkBackground = Color(0xFF10131A);
-const Color darkSurface = Color(0xFF191E29);
-const Color accent = Color(0xFF4C8DFF);
+const Color darkBackground = Color(0xFF090812);
+const Color darkSurface = Color(0xFF171525);
+const Color accent = Color(0xFF8B5CF6);
 
 class DarkTgApp extends StatelessWidget {
   const DarkTgApp({super.key});
@@ -26,6 +26,13 @@ class DarkTgApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: darkBackground,
+        appBarTheme: const AppBarTheme(backgroundColor: darkBackground, surfaceTintColor: Colors.transparent),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: const Color(0xFF100F1B),
+          indicatorColor: accent.withValues(alpha: 0.22),
+          labelTextStyle: WidgetStateProperty.all(const TextStyle(fontWeight: FontWeight.w600)),
+        ),
+        cardTheme: CardThemeData(color: darkSurface, surfaceTintColor: Colors.transparent),
         colorScheme: ColorScheme.fromSeed(
           seedColor: accent,
           brightness: Brightness.dark,
