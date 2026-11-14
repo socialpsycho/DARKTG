@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'services/tdlib_service.dart';
 import 'screens/telegram_connect_page.dart';
+import 'screens/chats_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,63 +79,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class ChatsPage extends StatelessWidget {
-  const ChatsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final chats = [
-      ('DARKTG', 'Добро пожаловать в DARKTG', '12:40', Icons.bolt),
-      ('Избранное', 'Заметки и сохранённые сообщения', 'Вчера', Icons.bookmark),
-      ('Telegram', 'Здесь появятся ваши чаты после подключения', 'Пн', Icons.send),
-    ];
-
-    return Column(
-      children: [
-        const _TopBar(title: 'DARKTG', subtitle: 'Ваше пространство'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Поиск',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: darkSurface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: ListView.separated(
-            itemCount: chats.length,
-            separatorBuilder: (_, __) => const Divider(height: 1, indent: 84),
-            itemBuilder: (context, index) {
-              final chat = chats[index];
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                leading: CircleAvatar(
-                  radius: 27,
-                  backgroundColor: accent.withValues(alpha: 0.18),
-                  child: Icon(chat.$4, color: accent),
-                ),
-                title: Text(chat.$1, style: const TextStyle(fontWeight: FontWeight.w600)),
-                subtitle: Text(chat.$2, maxLines: 1, overflow: TextOverflow.ellipsis),
-                trailing: Text(chat.$3, style: Theme.of(context).textTheme.labelSmall),
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Подключение Telegram появится на следующем этапе')),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }
