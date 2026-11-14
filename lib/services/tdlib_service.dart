@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:handy_tdlib_next/handy_tdlib_next.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum TdlibEngineStatus { notStarted, starting, ready, unsupportedPlatform, failed }
 
@@ -82,7 +83,7 @@ class TdlibService {
 
   /// Starts TDLib configuration. API credentials are accepted at runtime and
   /// are never written to source code or sent to the repository.
-  void configure({
+  Future<void> configure({
     required int apiId,
     required String apiHash,
     required String systemLanguageCode,
