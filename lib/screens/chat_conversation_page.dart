@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/tdlib_service.dart';
+import 'local_message_archive_page.dart';
 
 class ChatConversationPage extends StatefulWidget {
   final int chatId;
@@ -145,6 +146,16 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           const Text('DARKTG', style: TextStyle(fontSize: 11, color: Colors.white54)),
         ]),
         actions: [
+          IconButton(
+            tooltip: 'Локальная история',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => LocalMessageArchivePage(
+                chatId: widget.chatId,
+                chatTitle: widget.title,
+              ),
+            )),
+            icon: const Icon(Icons.history),
+          ),
           IconButton(onPressed: _loadHistory, icon: const Icon(Icons.refresh)),
         ],
       ),
