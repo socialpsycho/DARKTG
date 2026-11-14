@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/ghost_mode_service.dart';
+import '../services/tdlib_service.dart';
 
 class GhostModeSettingsPage extends StatefulWidget {
   const GhostModeSettingsPage({super.key});
@@ -12,9 +13,16 @@ class _GhostModeSettingsPageState extends State<GhostModeSettingsPage> {
   final _ghost = GhostModeService.instance;
   bool _busy = false;
 
-  Future<void> _change(Future<void> Function() action) async {
+  Future<void> _change(Future<void> Function() action, {bool? onlineHidden}) async {
     setState(() => _busy = true);
     await action();
+    if (onlineHidden != null && TdlibService.instance.isReady) {
+      TdlibService.instance.sendRawRequest({
+        '@type': 'setOption',
+        'name': 'online',
+        'value': {'@type': 'optionValueBoolean', 'value': !onlineHidden},
+      });
+    }
     if (mounted) setState(() => _busy = false);
   }
 
@@ -64,7 +72,7 @@ class _GhostModeSettingsPageState extends State<GhostModeSettingsPage> {
             title: const Text('Не показывать онлайн'),
             subtitle: const Text('Не включать online через TDLib setOption. Это не скрывает уже отправленные сервером данные.'),
             value: _ghost.hideOnlineStatus,
-            onChanged: _busy ? null : (v) => _change(() => _ghost.setHideOnlineStatus(v)),
+            onChanged: _busy ? null : (v) => _change(() => _ghost.setHideOnlineStatus(v), onlineHidden: v),
           ),
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 12, 20, 24),
