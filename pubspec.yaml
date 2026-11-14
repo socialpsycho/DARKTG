@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  handy_tdlib_next: ^2.3.16
 
 dev_dependencies:
   flutter_test:
