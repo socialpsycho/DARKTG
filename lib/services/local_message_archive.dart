@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stores messages observed by this DARKTG installation and snapshots edits.
 /// This is a local archive, not a server-side recovery mechanism.
@@ -16,9 +17,12 @@ class LocalMessageArchive {
   Future<void> _writeQueue = Future<void>.value();
   File? _file;
   bool _initialized = false;
+  bool enabled = true;
 
   Future<void> initialize() async {
     if (_initialized) return;
+    final preferences = await SharedPreferences.getInstance();
+    enabled = preferences.getBool('darktg_save_message_history') ?? true;
     final directory = await getApplicationSupportDirectory();
     _file = File('${directory.path}/darktg_message_archive.json');
     if (await _file!.exists()) {
@@ -46,8 +50,16 @@ class LocalMessageArchive {
     });
   }
 
+  Future<void> setEnabled(bool value) async {
+    if (!_initialized) await initialize();
+    enabled = value;
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setBool('darktg_save_message_history', value);
+  }
+
   Future<void> recordUpdate(Map<String, dynamic> event) async {
     if (!_initialized) await initialize();
+    if (!enabled) return;
     final type = event['@type'];
 
     if (type == 'messages') {
