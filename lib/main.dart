@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(const DarkTgApp());
+import 'services/tdlib_service.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TdlibService.instance.initialize();
+  runApp(const DarkTgApp());
+}
 
 const Color darkBackground = Color(0xFF10131A);
 const Color darkSurface = Color(0xFF191E29);
