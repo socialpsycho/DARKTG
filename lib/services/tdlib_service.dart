@@ -89,16 +89,21 @@ class TdlibService {
     required String systemLanguageCode,
     required String deviceModel,
     required String applicationVersion,
-  }) {
+  }) async {
     if (apiId <= 0 || apiHash.trim().isEmpty) {
       throw ArgumentError('A valid API ID and API hash are required.');
     }
-    final root = Directory('${Directory.systemTemp.path}/darktg_tdlib');
-    root.createSync(recursive: true);
+
+    final appSupport = await getApplicationSupportDirectory();
+    final root = Directory('${appSupport.path}/darktg_tdlib');
+    final files = Directory('${root.path}/files');
+    await root.create(recursive: true);
+    await files.create(recursive: true);
+
     sendRawRequest({
       '@type': 'setTdlibParameters',
       'database_directory': root.path,
-      'files_directory': '${root.path}/files',
+      'files_directory': files.path,
       'use_file_database': true,
       'use_chat_info_database': true,
       'use_message_database': true,
