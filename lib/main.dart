@@ -5,6 +5,7 @@ import 'services/local_message_archive.dart';
 import 'services/ghost_mode_service.dart';
 import 'screens/telegram_connect_page.dart';
 import 'screens/chats_page.dart';
+import 'screens/contacts_page.dart';
 import 'screens/ghost_mode_settings_page.dart';
 
 Future<void> main() async {
@@ -92,39 +93,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class ContactsPage extends StatelessWidget {
-  const ContactsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const _TopBar(title: 'Контакты', subtitle: 'Люди и группы'),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Найти контакт',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: darkSurface,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        const Expanded(
-          child: Center(
-            child: Text('Контакты появятся после подключения Telegram'),
-          ),
-        ),
-      ],
     );
   }
 }
