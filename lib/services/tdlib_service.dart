@@ -5,6 +5,7 @@ import 'dart:isolate';
 
 import 'package:handy_tdlib_next/handy_tdlib_next.dart';
 import 'package:path_provider/path_provider.dart';
+import 'ghost_mode_service.dart';
 
 enum TdlibEngineStatus { notStarted, starting, ready, unsupportedPlatform, failed }
 
@@ -76,6 +77,7 @@ class TdlibService {
   }
 
   void sendRawRequest(Map<String, dynamic> request) {
+    if (GhostModeService.instance.shouldSuppress(request)) return;
     final port = _workerPort;
     if (!isReady || port == null) throw StateError('TDLib is not ready.');
     port.send({'type': 'send', 'request': request});
