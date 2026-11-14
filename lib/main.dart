@@ -230,7 +230,7 @@ class DarkTgSettingsPage extends StatefulWidget {
 class _DarkTgSettingsPageState extends State<DarkTgSettingsPage> {
   // These switches currently control prototype UI state only.
   // Telegram-side behavior will be connected after the client API integration.
-  bool saveHistory = true;
+  bool saveHistory = LocalMessageArchive.instance.enabled;
   bool translate = false;
   bool voiceEffects = false;
   bool appLock = false;
@@ -297,7 +297,10 @@ class _DarkTgSettingsPageState extends State<DarkTgSettingsPage> {
             title: 'История сообщений',
             subtitle: 'Включить локальное сохранение полученных сообщений',
             value: saveHistory,
-            onChanged: (value) => setState(() => saveHistory = value),
+            onChanged: (value) async {
+              await LocalMessageArchive.instance.setEnabled(value);
+              if (mounted) setState(() => saveHistory = value);
+            },
           ),
           const _SectionTitle('ВНЕШНИЙ ВИД'),
           ListTile(
