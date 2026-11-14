@@ -159,7 +159,6 @@ class _ContactsPageState extends State<ContactsPage> {
                     final id = user['id'] as int;
                     final name = _displayName(user);
                     final username = user['username']?.toString() ?? '';
-                    final photo = user['profile_photo'];
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: accent.withValues(alpha: .18),
