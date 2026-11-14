@@ -172,57 +172,148 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        const _TopBar(title: 'Настройки DARKTG', subtitle: 'Персонализация и функции'),
+        const _TopBar(title: 'Настройки', subtitle: 'Профиль и параметры приложения'),
         const SizedBox(height: 12),
-        const _SectionTitle('ПРИВАТНОСТЬ'),
-        _SettingTile(
-          icon: Icons.visibility_off_outlined,
-          title: 'Ghost Mode',
-          subtitle: 'Настройки отображения статуса',
-          onTap: () => _showInfo(context, 'Ghost Mode', 'Доступные настройки будут зависеть от возможностей Telegram API.'),
+        const ListTile(
+          leading: CircleAvatar(
+            radius: 28,
+            backgroundColor: darkSurface,
+            child: Icon(Icons.person_outline, color: accent, size: 28),
+          ),
+          title: Text('Мой профиль'),
+          subtitle: Text('Профиль появится после подключения Telegram'),
+          trailing: Icon(Icons.chevron_right, color: Colors.white38),
         ),
+        const Divider(height: 24),
         _SettingTile(
-          icon: Icons.history,
-          title: 'История сообщений',
-          subtitle: 'Локальное хранение уже полученных сообщений',
-          onTap: () => _showInfo(context, 'История сообщений', 'Можно хранить только сообщения, которые клиент законно получил.'),
-        ),
-        const _SectionTitle('ВНЕШНИЙ ВИД'),
-        _SettingTile(
-          icon: Icons.palette_outlined,
-          title: 'Темы и оформление',
-          subtitle: 'Цвета, фон и внешний вид',
-          onTap: () => _showInfo(context, 'Темы', 'Настройка тем будет добавлена позже.'),
-        ),
-        const _SectionTitle('ИНСТРУМЕНТЫ'),
-        _SettingTile(
-          icon: Icons.translate,
-          title: 'Переводчик',
-          subtitle: 'Перевод сообщений',
-          onTap: () => _showInfo(context, 'Переводчик', 'Функция будет добавлена на следующем этапе.'),
-        ),
-        _SettingTile(
-          icon: Icons.graphic_eq,
-          title: 'Голосовые эффекты',
-          subtitle: 'Локальная обработка аудио',
-          onTap: () => _showInfo(context, 'Голосовые эффекты', 'Функция пока находится в планах.'),
-        ),
-        _SettingTile(
-          icon: Icons.person_add_alt_1,
-          title: 'Аккаунты',
-          subtitle: 'Управление профилями',
-          onTap: () => _showInfo(context, 'Аккаунты', 'Поддержка нескольких аккаунтов появится после интеграции.'),
+          icon: Icons.notifications_none,
+          title: 'Уведомления и звуки',
+          subtitle: 'Настройки уведомлений',
+          onTap: () => _showInfo(context, 'Уведомления и звуки', 'Настройки уведомлений появятся после подключения Telegram.'),
         ),
         _SettingTile(
           icon: Icons.lock_outline,
-          title: 'Блокировка приложения',
-          subtitle: 'Защита локального доступа',
-          onTap: () => _showInfo(context, 'Блокировка', 'Локальная защита будет добавлена позже.'),
+          title: 'Конфиденциальность',
+          subtitle: 'Безопасность и приватность',
+          onTap: () => _showInfo(context, 'Конфиденциальность', 'Стандартные настройки приватности будут добавлены при интеграции Telegram.'),
         ),
-        const SizedBox(height: 24),
-        const Center(child: Text('DARKTG • Prototype 0.1.0')),
+        _SettingTile(
+          icon: Icons.data_usage,
+          title: 'Данные и память',
+          subtitle: 'Использование памяти и сети',
+          onTap: () => _showInfo(context, 'Данные и память', 'Раздел пока готовится.'),
+        ),
+        _SettingTile(
+          icon: Icons.chat_bubble_outline,
+          title: 'Настройки чатов',
+          subtitle: 'Отображение и поведение чатов',
+          onTap: () => _showInfo(context, 'Настройки чатов', 'Раздел пока готовится.'),
+        ),
+        const SizedBox(height: 18),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'ДОПОЛНИТЕЛЬНЫЕ ВОЗМОЖНОСТИ',
+            style: TextStyle(color: accent, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.bold),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+          child: Card(
+            color: darkSurface,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.bolt, color: accent, size: 27),
+              ),
+              title: const Text('Настройки DARKTG', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Ghost Mode, оформление, история и другие функции'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const DarkTgSettingsPage()),
+              ),
+            ),
+          ),
+        ),
+        const Center(child: Text('DARKTG • Prototype 0.2.0', style: TextStyle(color: Colors.white54))),
         const SizedBox(height: 24),
       ],
+    );
+  }
+}
+
+class DarkTgSettingsPage extends StatelessWidget {
+  const DarkTgSettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Настройки DARKTG'),
+        backgroundColor: darkBackground,
+      ),
+      body: ListView(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Text('ПРИВАТНОСТЬ', style: TextStyle(color: accent, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.bold)),
+          ),
+          _SettingTile(
+            icon: Icons.visibility_off_outlined,
+            title: 'Ghost Mode',
+            subtitle: 'Параметры статуса и активности',
+            onTap: () => _showInfo(context, 'Ghost Mode', 'Здесь будут настройки видимости активности. Доступность отдельных режимов зависит от возможностей Telegram API.'),
+          ),
+          _SettingTile(
+            icon: Icons.history,
+            title: 'История сообщений',
+            subtitle: 'Локальное хранение полученных сообщений',
+            onTap: () => _showInfo(context, 'История сообщений', 'История сможет хранить сообщения, которые клиент получил. Восстановить не полученные ранее или удалённые до сохранения сообщения нельзя.'),
+          ),
+          const _SectionTitle('ВНЕШНИЙ ВИД'),
+          _SettingTile(
+            icon: Icons.palette_outlined,
+            title: 'Темы и оформление',
+            subtitle: 'Цвета, фон, шрифты и интерфейс',
+            onTap: () => _showInfo(context, 'Темы и оформление', 'Здесь будут настройки цветов, фона и внешнего вида DARKTG.'),
+          ),
+          const _SectionTitle('ИНСТРУМЕНТЫ'),
+          _SettingTile(
+            icon: Icons.translate,
+            title: 'Переводчик',
+            subtitle: 'Перевод сообщений',
+            onTap: () => _showInfo(context, 'Переводчик', 'Здесь будут настройки перевода сообщений.'),
+          ),
+          _SettingTile(
+            icon: Icons.graphic_eq,
+            title: 'Голосовые эффекты',
+            subtitle: 'Локальные аудиоэффекты',
+            onTap: () => _showInfo(context, 'Голосовые эффекты', 'Здесь будут настройки обработки аудио на устройстве.'),
+          ),
+          _SettingTile(
+            icon: Icons.person_add_alt_1,
+            title: 'Аккаунты',
+            subtitle: 'Управление подключёнными аккаунтами',
+            onTap: () => _showInfo(context, 'Аккаунты', 'Управление несколькими аккаунтами будет добавлено после интеграции Telegram.'),
+          ),
+          const _SectionTitle('ЗАЩИТА'),
+          _SettingTile(
+            icon: Icons.lock_outline,
+            title: 'Блокировка приложения',
+            subtitle: 'Защита доступа к DARKTG',
+            onTap: () => _showInfo(context, 'Блокировка приложения', 'Здесь будут настройки локальной блокировки приложения.'),
+          ),
+          const SizedBox(height: 20),
+          const Center(child: Text('Дополнительные функции DARKTG', style: TextStyle(color: Colors.white54))),
+          const SizedBox(height: 24),
+        ],
+      ),
     );
   }
 }
