@@ -8,10 +8,15 @@ import 'package:path_provider/path_provider.dart';
 
 enum TdlibEngineStatus { notStarted, starting, ready, unsupportedPlatform, failed }
 
-/// Owns the TDLib worker isolate. TDLib receive calls are kept off the UI isolate.
 class TdlibService {
   TdlibService._();
   static final TdlibService instance = TdlibService._();
+
+  // Supplied by the release/build pipeline; never committed to source control.
+  static const int buildApiId = int.fromEnvironment('DARKTG_API_ID');
+  static const String buildApiHash = String.fromEnvironment('DARKTG_API_HASH');
+  static bool get hasBuildCredentials =>
+      buildApiId > 0 && buildApiHash.isNotEmpty;
 
   final StreamController<Map<String, dynamic>> _events =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -34,7 +39,6 @@ class TdlibService {
       _status = TdlibEngineStatus.unsupportedPlatform;
       return;
     }
-
     _status = TdlibEngineStatus.starting;
     _receivePort = ReceivePort();
     _receivePort!.listen(_handleWorkerMessage);
@@ -67,22 +71,31 @@ class TdlibService {
       try {
         final decoded = jsonDecode(message['raw'] as String);
         if (decoded is Map<String, dynamic>) _events.add(decoded);
-      } catch (_) {
-        // Ignore malformed native output; never crash the application UI.
-      }
+      } catch (_) {}
     }
   }
 
   void sendRawRequest(Map<String, dynamic> request) {
     final port = _workerPort;
-    if (!isReady || port == null) {
-      throw StateError('TDLib is not ready.');
-    }
+    if (!isReady || port == null) throw StateError('TDLib is not ready.');
     port.send({'type': 'send', 'request': request});
   }
 
-  /// Starts TDLib configuration. API credentials are accepted at runtime and
-  /// are never written to source code or sent to the repository.
+  Future<void> configureFromBuild() async {
+    if (!hasBuildCredentials) {
+      throw StateError(
+        'Сборка DARKTG пока не настроена: владелец приложения должен добавить DARKTG_API_ID и DARKTG_API_HASH в GitHub Actions Secrets.',
+      );
+    }
+    await configure(
+      apiId: buildApiId,
+      apiHash: buildApiHash,
+      systemLanguageCode: 'ru',
+      deviceModel: 'DARKTG Android',
+      applicationVersion: '0.5.0',
+    );
+  }
+
   Future<void> configure({
     required int apiId,
     required String apiHash,
@@ -93,13 +106,11 @@ class TdlibService {
     if (apiId <= 0 || apiHash.trim().isEmpty) {
       throw ArgumentError('A valid API ID and API hash are required.');
     }
-
     final appSupport = await getApplicationSupportDirectory();
     final root = Directory('${appSupport.path}/darktg_tdlib');
     final files = Directory('${root.path}/files');
     await root.create(recursive: true);
     await files.create(recursive: true);
-
     sendRawRequest({
       '@type': 'setTdlibParameters',
       'database_directory': root.path,
@@ -119,24 +130,19 @@ class TdlibService {
     });
   }
 
-  void setPhoneNumber(String phoneNumber) {
-    sendRawRequest({
-      '@type': 'setAuthenticationPhoneNumber',
-      'phone_number': phoneNumber.trim(),
-      'settings': {'@type': 'phoneNumberAuthenticationSettings'},
-    });
-  }
+  void setPhoneNumber(String phoneNumber) => sendRawRequest({
+    '@type': 'setAuthenticationPhoneNumber',
+    'phone_number': phoneNumber.trim(),
+    'settings': {'@type': 'phoneNumberAuthenticationSettings'},
+  });
 
-  void checkCode(String code) {
-    sendRawRequest({'@type': 'checkAuthenticationCode', 'code': code.trim()});
-  }
+  void checkCode(String code) =>
+      sendRawRequest({'@type': 'checkAuthenticationCode', 'code': code.trim()});
 
-  void checkPassword(String password) {
-    sendRawRequest({
-      '@type': 'checkAuthenticationPassword',
-      'password': password,
-    });
-  }
+  void checkPassword(String password) => sendRawRequest({
+    '@type': 'checkAuthenticationPassword',
+    'password': password,
+  });
 
   void dispose() {
     _workerPort?.send({'type': 'close'});
@@ -155,15 +161,16 @@ Future<void> _tdlibWorker(SendPort mainPort) async {
     await TdPlugin.initialize();
     final clientId = TdPlugin.instance.tdCreateClientId();
     commands.listen((dynamic command) {
-      if (command is! Map || command['type'] != 'send') return;
-      final request = command['request'];
-      if (request is Map) {
-        TdPlugin.instance.tdSend(clientId, jsonEncode(request));
+      if (command is Map && command['type'] == 'send') {
+        final request = command['request'];
+        if (request is Map) {
+          TdPlugin.instance.tdSend(clientId, jsonEncode(request));
+        }
+      } else if (command is Map && command['type'] == 'close') {
+        commands.close();
       }
     });
     mainPort.send({'type': 'ready', 'port': commands.sendPort});
-
-    // TDLib's blocking receive runs in this isolate, not on Flutter's UI thread.
     while (true) {
       final raw = TdPlugin.instance.tdReceive(1);
       if (raw != null) mainPort.send({'type': 'update', 'raw': raw});
