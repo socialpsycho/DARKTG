@@ -30,7 +30,7 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
       if (!mounted) return;
       final service = TdlibService.instance;
       if (service.isReady) {
-        if (!service.hasBuildCredentials) {
+        if (!TdlibService.hasBuildCredentials) {
           setState(() {
             _step = 'error';
             _message = 'Эта сборка ещё не настроена владельцем DARKTG. API ID и API Hash не нужно вводить пользователям.';
