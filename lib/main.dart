@@ -248,8 +248,40 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class DarkTgSettingsPage extends StatelessWidget {
+class DarkTgSettingsPage extends StatefulWidget {
   const DarkTgSettingsPage({super.key});
+
+  @override
+  State<DarkTgSettingsPage> createState() => _DarkTgSettingsPageState();
+}
+
+class _DarkTgSettingsPageState extends State<DarkTgSettingsPage> {
+  // These switches currently control prototype UI state only.
+  // Telegram-side behavior will be connected after the client API integration.
+  bool ghostMode = false;
+  bool saveHistory = true;
+  bool translate = false;
+  bool voiceEffects = false;
+  bool appLock = false;
+  bool showOnlineStatus = true;
+  bool showTypingStatus = true;
+
+  Widget _switchTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      secondary: Icon(icon, color: accent),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      activeThumbColor: accent,
+      onChanged: onChanged,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -260,57 +292,100 @@ class DarkTgSettingsPage extends StatelessWidget {
       ),
       body: ListView(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
-            child: Text('ПРИВАТНОСТЬ', style: TextStyle(color: accent, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.bold)),
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withValues(alpha: 0.25)),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: accent),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Это первые интерактивные настройки прототипа. Переключатели пока меняют состояние интерфейса на время работы приложения. Для реальной работы с Telegram потребуется подключение клиентского API.',
+                  ),
+                ),
+              ],
+            ),
           ),
-          _SettingTile(
+          const _SectionTitle('ПРИВАТНОСТЬ'),
+          _switchTile(
             icon: Icons.visibility_off_outlined,
             title: 'Ghost Mode',
-            subtitle: 'Параметры статуса и активности',
-            onTap: () => _showInfo(context, 'Ghost Mode', 'Здесь будут настройки видимости активности. Доступность отдельных режимов зависит от возможностей Telegram API.'),
+            subtitle: 'Общий переключатель режима',
+            value: ghostMode,
+            onChanged: (value) => setState(() => ghostMode = value),
           ),
-          _SettingTile(
+          if (ghostMode) ...[
+            _switchTile(
+              icon: Icons.circle_outlined,
+              title: 'Показывать статус «в сети»',
+              subtitle: 'Настройка интерфейса статуса',
+              value: showOnlineStatus,
+              onChanged: (value) => setState(() => showOnlineStatus = value),
+            ),
+            _switchTile(
+              icon: Icons.keyboard_outlined,
+              title: 'Показывать набор текста',
+              subtitle: 'Настройка индикатора набора',
+              value: showTypingStatus,
+              onChanged: (value) => setState(() => showTypingStatus = value),
+            ),
+          ],
+          _switchTile(
             icon: Icons.history,
             title: 'История сообщений',
-            subtitle: 'Локальное хранение полученных сообщений',
-            onTap: () => _showInfo(context, 'История сообщений', 'История сможет хранить сообщения, которые клиент получил. Восстановить не полученные ранее или удалённые до сохранения сообщения нельзя.'),
+            subtitle: 'Включить локальное сохранение полученных сообщений',
+            value: saveHistory,
+            onChanged: (value) => setState(() => saveHistory = value),
           ),
           const _SectionTitle('ВНЕШНИЙ ВИД'),
-          _SettingTile(
-            icon: Icons.palette_outlined,
-            title: 'Темы и оформление',
-            subtitle: 'Цвета, фон, шрифты и интерфейс',
-            onTap: () => _showInfo(context, 'Темы и оформление', 'Здесь будут настройки цветов, фона и внешнего вида DARKTG.'),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined, color: accent),
+            title: const Text('Темы и оформление'),
+            subtitle: const Text('Выбор оформления будет следующим этапом'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+            onTap: () => _showInfo(context, 'Темы и оформление', 'Следующим этапом добавим выбор акцентного цвета и фона.'),
           ),
           const _SectionTitle('ИНСТРУМЕНТЫ'),
-          _SettingTile(
+          _switchTile(
             icon: Icons.translate,
             title: 'Переводчик',
-            subtitle: 'Перевод сообщений',
-            onTap: () => _showInfo(context, 'Переводчик', 'Здесь будут настройки перевода сообщений.'),
+            subtitle: 'Подготовить перевод сообщений',
+            value: translate,
+            onChanged: (value) => setState(() => translate = value),
           ),
-          _SettingTile(
+          _switchTile(
             icon: Icons.graphic_eq,
             title: 'Голосовые эффекты',
-            subtitle: 'Локальные аудиоэффекты',
-            onTap: () => _showInfo(context, 'Голосовые эффекты', 'Здесь будут настройки обработки аудио на устройстве.'),
+            subtitle: 'Локальная обработка аудио — в разработке',
+            value: voiceEffects,
+            onChanged: (value) => setState(() => voiceEffects = value),
           ),
-          _SettingTile(
-            icon: Icons.person_add_alt_1,
-            title: 'Аккаунты',
-            subtitle: 'Управление подключёнными аккаунтами',
-            onTap: () => _showInfo(context, 'Аккаунты', 'Управление несколькими аккаунтами будет добавлено после интеграции Telegram.'),
+          ListTile(
+            leading: const Icon(Icons.person_add_alt_1, color: accent),
+            title: const Text('Аккаунты'),
+            subtitle: const Text('Несколько аккаунтов — после интеграции Telegram'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+            onTap: () => _showInfo(context, 'Аккаунты', 'Подключение аккаунтов будет реализовано через Telegram client API. Не вводите коды входа в сторонние формы.'),
           ),
           const _SectionTitle('ЗАЩИТА'),
-          _SettingTile(
+          _switchTile(
             icon: Icons.lock_outline,
             title: 'Блокировка приложения',
-            subtitle: 'Защита доступа к DARKTG',
-            onTap: () => _showInfo(context, 'Блокировка приложения', 'Здесь будут настройки локальной блокировки приложения.'),
+            subtitle: 'Переключатель прототипа локальной защиты',
+            value: appLock,
+            onChanged: (value) => setState(() => appLock = value),
           ),
           const SizedBox(height: 20),
-          const Center(child: Text('Дополнительные функции DARKTG', style: TextStyle(color: Colors.white54))),
+          const Center(
+            child: Text('DARKTG • Prototype 0.3.0', style: TextStyle(color: Colors.white54)),
+          ),
           const SizedBox(height: 24),
         ],
       ),
