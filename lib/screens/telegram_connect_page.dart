@@ -12,6 +12,8 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
   final _password = TextEditingController();
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
   StreamSubscription<Map<String, dynamic>>? _subscription;
   String _step = 'loading';
   String _message = 'Запускаем защищённое подключение…';
@@ -30,28 +32,18 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
       if (!mounted) return;
       final service = TdlibService.instance;
       if (service.isReady) {
-        if (!TdlibService.hasBuildCredentials) {
-          setState(() {
-            _step = 'error';
-            _message = 'Эта сборка ещё не настроена владельцем DARKTG. API ID и API Hash не нужно вводить пользователям.';
+        final authState = service.lastAuthorizationState;
+        if (authState != null) {
+          _onTdlibEvent({
+            '@type': 'updateAuthorizationState',
+            'authorization_state': authState,
           });
-          return;
-        }
-        if (!_configured) {
-          _configured = true;
-          try {
-            await service.configureFromBuild();
-            if (mounted) setState(() {
-              _step = 'waiting';
-              _message = 'Подготавливаем вход в Telegram…';
-              _busy = true;
-            });
-          } catch (error) {
-            if (mounted) setState(() {
-              _step = 'error';
-              _message = error.toString();
-            });
-          }
+        } else if (mounted) {
+          setState(() {
+            _step = 'waiting';
+            _message = 'Подготавливаем вход в Telegram…';
+            _busy = true;
+          });
         }
         return;
       }
@@ -95,6 +87,10 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
             _step = 'password';
             _message = 'Введите пароль двухэтапной проверки Telegram.';
             break;
+          case 'authorizationStateWaitRegistration':
+            _step = 'registration';
+            _message = 'Для нового аккаунта укажите имя.';
+            break;
           case 'authorizationStateReady':
             _step = 'ready';
             _message = 'Telegram подключён.';
@@ -107,6 +103,12 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
             _message = 'Сессия Telegram закрыта.';
             break;
         }
+      });
+    } else if (event['@type'] == 'darktgFloodWait') {
+      final seconds = (event['seconds'] as num?)?.toInt() ?? 0;
+      setState(() {
+        _busy = false;
+        _message = 'Telegram просит подождать $seconds сек. Повторите попытку после паузы.';
       });
     } else if (event['@type'] == 'error') {
       setState(() {
@@ -133,10 +135,20 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
     setState(() { _busy = true; _message = 'Проверяем пароль…'; });
   }
 
+  void _sendRegistration() {
+    if (_firstName.text.trim().isEmpty) return;
+    TdlibService.instance.registerUser(
+      firstName: _firstName.text,
+      lastName: _lastName.text,
+    );
+    setState(() { _busy = true; _message = 'Создаём аккаунт…'; });
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
     _phone.dispose(); _code.dispose(); _password.dispose();
+    _firstName.dispose(); _lastName.dispose();
     super.dispose();
   }
 
@@ -171,6 +183,11 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
         if (_step == 'password') ...[
           _field(_password, 'Пароль двухэтапной проверки', secret: true),
           FilledButton(onPressed: _busy ? null : _sendPassword, child: const Text('Подтвердить')),
+        ],
+        if (_step == 'registration') ...[
+          _field(_firstName, 'Имя'),
+          _field(_lastName, 'Фамилия (необязательно)'),
+          FilledButton(onPressed: _busy ? null : _sendRegistration, child: const Text('Зарегистрироваться')),
         ],
         if (_step == 'ready')
           const ListTile(leading: Icon(Icons.check_circle, color: Colors.green),
