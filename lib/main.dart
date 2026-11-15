@@ -8,6 +8,7 @@ import 'screens/auth_page.dart';
 import 'screens/chats_page.dart';
 import 'screens/contacts_page.dart';
 import 'screens/settings_page.dart';
+import 'widgets/floating_bottom_navigation_bar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -245,21 +246,43 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int selectedIndex = 0;
 
-  static const pages = [ChatsPage(), ContactsPage(), SettingsPage()];
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(child: pages[selectedIndex]),
-      bottomNavigationBar: NavigationBar(
+      body: IndexedStack(
+        index: selectedIndex,
+        children: [
+          const ContactsPage(),
+          const _CallsPlaceholder(),
+          ChatsPage(
+            onOpenGhostMode: () => setState(() => selectedIndex = 3),
+            onNewMessage: () => setState(() => selectedIndex = 0),
+          ),
+          const SettingsPage(),
+        ],
+      ),
+      bottomNavigationBar: FloatingBottomNavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) => setState(() => selectedIndex = index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Чаты'),
-          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Контакты'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Настройки'),
-        ],
       ),
     );
   }
+}
+
+
+class _CallsPlaceholder extends StatelessWidget {
+  const _CallsPlaceholder();
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: darkBackground,
+    body: Center(child: Column(mainAxisSize:MainAxisSize.min,children:[
+      Icon(Icons.call_outlined,size:42,color:Colors.white38),
+      SizedBox(height:12),
+      Text('Звонки',style:TextStyle(fontSize:20,fontWeight:FontWeight.w600)),
+      SizedBox(height:5),
+      Text('История звонков появится здесь',style:TextStyle(color:Colors.white54)),
+    ])),
+  );
 }
