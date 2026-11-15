@@ -8,7 +8,7 @@ This repository contains an early UI prototype with:
 - DARKTG settings sections for privacy, appearance and tools
 - A GitHub Actions workflow that builds an Android debug APK
 
-**Telegram sign-in and message sync are not yet verified end-to-end.** The Android app now starts a background TDLib worker, receives TDLib JSON updates, and includes an in-app authorization screen for API ID/hash, phone number, login code and optional 2FA password. A successful build does not prove that Telegram authorization works on a device; chat synchronization and live messaging remain unfinished.
+**Telegram sign-in and message sync are not yet verified end-to-end.** The Android app starts a background TDLib worker, configures TDLib parameters from `lib/core/telegram/config.dart`, and provides phone, login-code, optional 2FA password, and new-account registration steps. A successful build does not prove that Telegram authorization works on a device; chat synchronization and live messaging remain unfinished.
 
 ## Telegram integration status
 - Android: initial TDLib engine bridge added with `handy_tdlib_next` (TDLib 1.8.36).
