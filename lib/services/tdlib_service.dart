@@ -165,7 +165,9 @@ class TdlibService {
         apiId: buildApiId,
         apiHash: buildApiHash,
         systemLanguageCode: Config.systemLanguageCode,
-        deviceModel: Config.deviceModel,
+        deviceModel: GhostModeService.instance.useCustomDeviceModel
+            ? Config.deviceModel
+            : 'Android',
         applicationVersion: Config.applicationVersion,
       );
     } catch (_) {

@@ -1,15 +1,17 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
+import 'core/telegram/config.dart';
 import 'services/tdlib_service.dart';
 import 'services/local_message_archive.dart';
 import 'services/ghost_mode_service.dart';
 import 'screens/telegram_connect_page.dart';
 import 'screens/chats_page.dart';
 import 'screens/contacts_page.dart';
-import 'screens/ghost_mode_settings_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load persisted privacy/device preferences before TDLib receives parameters.
   await GhostModeService.instance.initialize();
   await TdlibService.instance.initialize();
   await LocalMessageArchive.instance.initialize();
@@ -19,7 +21,7 @@ Future<void> main() async {
 
 const Color darkBackground = Color(0xFF090812);
 const Color darkSurface = Color(0xFF171525);
-const Color accent = Color(0xFF8B5CF6);
+const Color accent = Color(0xFF229ED9);
 
 class DarkTgApp extends StatelessWidget {
   const DarkTgApp({super.key});
@@ -33,22 +35,139 @@ class DarkTgApp extends StatelessWidget {
         useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: darkBackground,
-        appBarTheme: const AppBarTheme(backgroundColor: darkBackground, surfaceTintColor: Colors.transparent),
-        navigationBarTheme: NavigationBarThemeData(
-          backgroundColor: const Color(0xFF100F1B),
-          indicatorColor: accent.withValues(alpha: 0.22),
-          labelTextStyle: WidgetStateProperty.all(const TextStyle(fontWeight: FontWeight.w600)),
-        ),
-        cardTheme: CardThemeData(color: darkSurface, surfaceTintColor: Colors.transparent),
         colorScheme: ColorScheme.fromSeed(
           seedColor: accent,
           brightness: Brightness.dark,
           surface: darkSurface,
         ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: darkBackground,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: false,
+        ),
+        listTileTheme: const ListTileThemeData(
+          iconColor: accent,
+          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 3),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFF292936),
+          space: 1,
+          thickness: 0.6,
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.selected) ? accent : null),
+        ),
       ),
-      home: const MainScreen(),
+      home: const AuthorizationGate(),
     );
   }
+}
+
+/// The app root follows TDLib authorization updates. Login is shown only while
+/// TDLib requests it; once authorizationStateReady arrives, the chat UI opens.
+class AuthorizationGate extends StatefulWidget {
+  const AuthorizationGate({super.key});
+
+  @override
+  State<AuthorizationGate> createState() => _AuthorizationGateState();
+}
+
+class _AuthorizationGateState extends State<AuthorizationGate> {
+  StreamSubscription<Map<String, dynamic>>? _subscription;
+  String? _authorizationType;
+
+  @override
+  void initState() {
+    super.initState();
+    _authorizationType = TdlibService.instance.lastAuthorizationState?['@type']?.toString();
+    _subscription = TdlibService.instance.events.listen(_onEvent);
+  }
+
+  void _onEvent(Map<String, dynamic> event) {
+    if (!mounted) return;
+    if (event['@type'] == 'updateAuthorizationState') {
+      final state = event['authorization_state'];
+      if (state is Map) {
+        setState(() => _authorizationType = state['@type']?.toString());
+      }
+    } else if (event['@type'] == 'darktgTdlibReady') {
+      final state = TdlibService.instance.lastAuthorizationState;
+      if (state != null && mounted) {
+        setState(() => _authorizationType = state['@type']?.toString());
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = TdlibService.instance.status;
+    if (status == TdlibEngineStatus.failed ||
+        status == TdlibEngineStatus.unsupportedPlatform) {
+      return _StartupError(message: TdlibService.instance.lastError ??
+          'TDLib недоступна на этой платформе.');
+    }
+
+    if (_authorizationType == 'authorizationStateReady') {
+      return const MainScreen();
+    }
+
+    const authStates = {
+      'authorizationStateWaitPhoneNumber',
+      'authorizationStateWaitCode',
+      'authorizationStateWaitPassword',
+      'authorizationStateWaitEmailAddress',
+      'authorizationStateWaitEmailCode',
+      'authorizationStateWaitRegistration',
+      'authorizationStateWaitOtherDeviceConfirmation',
+      'authorizationStateWaitPremiumPurchase',
+      'authorizationStateClosed',
+    };
+    if (_authorizationType != null && authStates.contains(_authorizationType)) {
+      return const TelegramConnectPage();
+    }
+
+    return const Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: accent),
+            SizedBox(height: 18),
+            Text('Подключаем Telegram…'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartupError extends StatelessWidget {
+  final String message;
+  const _StartupError({required this.message});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.orange, size: 42),
+            const SizedBox(height: 14),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class MainScreen extends StatefulWidget {
@@ -61,11 +180,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int selectedIndex = 0;
 
-  static const pages = [
-    ChatsPage(),
-    ContactsPage(),
-    SettingsPage(),
-  ];
+  static const pages = [ChatsPage(), ContactsPage(), SettingsPage()];
 
   @override
   Widget build(BuildContext context) {
@@ -73,24 +188,11 @@ class _MainScreenState extends State<MainScreen> {
       body: SafeArea(child: pages[selectedIndex]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
-        onDestinationSelected: (index) =>
-            setState(() => selectedIndex = index),
+        onDestinationSelected: (index) => setState(() => selectedIndex = index),
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Чаты',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Контакты',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Настройки',
-          ),
+          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Чаты'),
+          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Контакты'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Настройки'),
         ],
       ),
     );
@@ -104,88 +206,76 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: [
-        const _TopBar(title: 'Настройки', subtitle: 'Профиль и параметры приложения'),
-        const SizedBox(height: 12),
-        const ListTile(
-          leading: CircleAvatar(
-            radius: 28,
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 22, 20, 14),
+          child: Text('Настройки', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
+        ),
+        ListTile(
+          leading: const CircleAvatar(
             backgroundColor: darkSurface,
-            child: Icon(Icons.person_outline, color: accent, size: 28),
+            child: Icon(Icons.person_outline, color: accent),
           ),
-          title: Text('Мой профиль'),
-          subtitle: Text('Профиль появится после подключения Telegram'),
-          trailing: Icon(Icons.chevron_right, color: Colors.white38),
+          title: const Text('Мой профиль'),
+          subtitle: const Text('Профиль аккаунта Telegram'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _showUnavailable(context, 'Профиль', 'Просмотр и редактирование профиля будет подключён к данным аккаунта TDLib.'),
         ),
-        const Divider(height: 24),
-        _SettingTile(
-          icon: Icons.link,
-          title: 'Подключить Telegram',
-          subtitle: 'Вход в аккаунт и синхронизация',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const TelegramConnectPage()),
-          ),
-        ),
-        _SettingTile(
+        const Divider(indent: 18, endIndent: 18),
+        _SettingsRow(
           icon: Icons.notifications_none,
           title: 'Уведомления и звуки',
-          subtitle: 'Настройки уведомлений',
-          onTap: () => _showInfo(context, 'Уведомления и звуки', 'Настройки уведомлений появятся после подключения Telegram.'),
+          onTap: () => _showUnavailable(context, 'Уведомления и звуки', 'Раздел пока не подключён к настройкам TDLib.'),
         ),
-        _SettingTile(
+        _SettingsRow(
           icon: Icons.lock_outline,
-          title: 'Конфиденциальность',
-          subtitle: 'Безопасность и приватность',
-          onTap: () => _showInfo(context, 'Конфиденциальность', 'Стандартные настройки приватности будут добавлены при интеграции Telegram.'),
+          title: 'Конфиденциальность и безопасность',
+          onTap: () => _showUnavailable(context, 'Конфиденциальность и безопасность', 'Системные настройки Telegram будут добавляться через поддерживаемые методы TDLib.'),
         ),
-        _SettingTile(
+        _SettingsRow(
           icon: Icons.data_usage,
           title: 'Данные и память',
-          subtitle: 'Использование памяти и сети',
-          onTap: () => _showInfo(context, 'Данные и память', 'Раздел пока готовится.'),
+          onTap: () => _showUnavailable(context, 'Данные и память', 'Раздел пока не подключён к настройкам TDLib.'),
         ),
-        _SettingTile(
-          icon: Icons.chat_bubble_outline,
-          title: 'Настройки чатов',
-          subtitle: 'Отображение и поведение чатов',
-          onTap: () => _showInfo(context, 'Настройки чатов', 'Раздел пока готовится.'),
+        _SettingsRow(
+          icon: Icons.devices,
+          title: 'Устройства',
+          onTap: () => _showUnavailable(context, 'Устройства', 'Список активных сессий будет подключён через getActiveSessions.'),
         ),
-        const SizedBox(height: 18),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          child: Text(
-            'ДОПОЛНИТЕЛЬНЫЕ ВОЗМОЖНОСТИ',
-            style: TextStyle(color: accent, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.bold),
-          ),
-        ),
+        const Divider(indent: 18, endIndent: 18),
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-          child: Card(
-            color: darkSurface,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              leading: Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.bolt, color: accent, size: 27),
-              ),
-              title: const Text('Настройки DARKTG', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Ghost Mode, оформление, история и другие функции'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const DarkTgSettingsPage()),
-              ),
-            ),
-          ),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+          child: Text('DARKTG', style: TextStyle(color: accent, fontWeight: FontWeight.w700, letterSpacing: 1.1)),
         ),
-        const Center(child: Text('DARKTG • Prototype 0.2.0', style: TextStyle(color: Colors.white54))),
+        ListTile(
+          leading: const Icon(Icons.bolt, color: accent),
+          title: const Text('Настройки DARKTG', style: TextStyle(fontWeight: FontWeight.w600)),
+          subtitle: const Text('Ghost Mode, история и модель устройства'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => const DarkTgSettingsPage(),
+          )),
+        ),
+        const SizedBox(height: 24),
+        const Center(child: Text('DARKTG', style: TextStyle(color: Colors.white38))),
         const SizedBox(height: 24),
       ],
     );
   }
+}
+
+class _SettingsRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  const _SettingsRow({required this.icon, required this.title, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    leading: Icon(icon),
+    title: Text(title),
+    trailing: const Icon(Icons.chevron_right, color: Colors.white38),
+    onTap: onTap,
+  );
 }
 
 class DarkTgSettingsPage extends StatefulWidget {
@@ -196,163 +286,103 @@ class DarkTgSettingsPage extends StatefulWidget {
 }
 
 class _DarkTgSettingsPageState extends State<DarkTgSettingsPage> {
-  // These switches currently control prototype UI state only.
-  // Telegram-side behavior will be connected after the client API integration.
-  bool saveHistory = LocalMessageArchive.instance.enabled;
-  bool translate = false;
-  bool voiceEffects = false;
-  bool appLock = false;
+  final _ghost = GhostModeService.instance;
+  bool _history = LocalMessageArchive.instance.enabled;
+  bool _busy = false;
 
-  Widget _switchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return SwitchListTile(
-      secondary: Icon(icon, color: accent),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      value: value,
-      activeThumbColor: accent,
-      onChanged: onChanged,
-    );
+  Future<void> _setAllGhost(bool value) async {
+    setState(() => _busy = true);
+    await _ghost.setAllEnabled(value);
+    if (value && TdlibService.instance.isReady) {
+      TdlibService.instance.setOnline(false);
+    }
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _setRead(bool value) async {
+    await _ghost.setHideReadReceipts(value);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setTyping(bool value) async {
+    await _ghost.setHideTyping(value);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setOnline(bool value) async {
+    await _ghost.setHideOnlineStatus(value);
+    if (TdlibService.instance.isReady) TdlibService.instance.setOnline(!value);
+    if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Настройки DARKTG'),
-        backgroundColor: darkBackground,
-      ),
+      appBar: AppBar(title: const Text('DARKTG')),
       body: ListView(
         children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: accent.withValues(alpha: 0.25)),
-            ),
-            child: const Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline, color: accent),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Это первые интерактивные настройки прототипа. Переключатели пока меняют состояние интерфейса на время работы приложения. Для реальной работы с Telegram потребуется подключение клиентского API.',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const _SectionTitle('ПРИВАТНОСТЬ'),
-          ListTile(
-            leading: const Icon(Icons.visibility_off_outlined, color: accent),
+          const _SettingsSection('GHOST MODE'),
+          SwitchListTile(
+            secondary: const Icon(Icons.visibility_off_outlined),
             title: const Text('Ghost Mode'),
-            subtitle: const Text('Скрытие прочтения, набора текста и онлайн-сигнала'),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const GhostModeSettingsPage()),
-            ),
+            subtitle: const Text('Включить выбранные ограничения активности'),
+            value: _ghost.enabled,
+            onChanged: _busy ? null : _setAllGhost,
           ),
-          _switchTile(
-            icon: Icons.history,
-            title: 'История сообщений',
-            subtitle: 'Включить локальное сохранение полученных сообщений',
-            value: saveHistory,
+          SwitchListTile(
+            title: const Text('Скрывать прочтение'),
+            subtitle: const Text('Не отправлять viewMessages'),
+            value: _ghost.hideReadReceipts,
+            onChanged: _busy ? null : _setRead,
+          ),
+          SwitchListTile(
+            title: const Text('Скрывать набор текста'),
+            subtitle: const Text('Не отправлять sendChatAction'),
+            value: _ghost.hideTyping,
+            onChanged: _busy ? null : _setTyping,
+          ),
+          SwitchListTile(
+            title: const Text('Скрывать онлайн'),
+            subtitle: const Text('Не включать online через TDLib'),
+            value: _ghost.hideOnlineStatus,
+            onChanged: _busy ? null : _setOnline,
+          ),
+          const Divider(indent: 18, endIndent: 18),
+          const _SettingsSection('ИСТОРИЯ'),
+          SwitchListTile(
+            secondary: const Icon(Icons.history),
+            title: const Text('Локальная история сообщений'),
+            subtitle: const Text('Сохранять сообщения, полученные этим устройством'),
+            value: _history,
             onChanged: (value) async {
               await LocalMessageArchive.instance.setEnabled(value);
-              if (mounted) setState(() => saveHistory = value);
+              if (mounted) setState(() => _history = value);
             },
           ),
-          const _SectionTitle('ВНЕШНИЙ ВИД'),
+          const Divider(indent: 18, endIndent: 18),
+          const _SettingsSection('УСТРОЙСТВО'),
           ListTile(
-            leading: const Icon(Icons.palette_outlined, color: accent),
-            title: const Text('Темы и оформление'),
-            subtitle: const Text('Выбор оформления будет следующим этапом'),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-            onTap: () => _showInfo(context, 'Темы и оформление', 'Следующим этапом добавим выбор акцентного цвета и фона.'),
+            leading: const Icon(Icons.phone_android),
+            title: const Text('Модель устройства'),
+            subtitle: Text(_ghost.useCustomDeviceModel
+                ? '${Config.deviceModel} • применяется при следующем запуске TDLib'
+                : 'Android • применяется при следующем запуске TDLib'),
           ),
-          const _SectionTitle('ИНСТРУМЕНТЫ'),
-          _switchTile(
-            icon: Icons.translate,
-            title: 'Переводчик',
-            subtitle: 'Подготовить перевод сообщений',
-            value: translate,
-            onChanged: (value) => setState(() => translate = value),
+          SwitchListTile(
+            title: const Text('Использовать модель DARKTG'),
+            subtitle: const Text('Изменение вступит в силу при следующей инициализации TDLib'),
+            value: _ghost.useCustomDeviceModel,
+            onChanged: (value) async {
+              await _ghost.setUseCustomDeviceModel(value);
+              if (mounted) setState(() {});
+            },
           ),
-          _switchTile(
-            icon: Icons.graphic_eq,
-            title: 'Голосовые эффекты',
-            subtitle: 'Локальная обработка аудио — в разработке',
-            value: voiceEffects,
-            onChanged: (value) => setState(() => voiceEffects = value),
-          ),
-          ListTile(
-            leading: const Icon(Icons.person_add_alt_1, color: accent),
-            title: const Text('Аккаунты'),
-            subtitle: const Text('Несколько аккаунтов — после интеграции Telegram'),
-            trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-            onTap: () => _showInfo(context, 'Аккаунты', 'Подключение аккаунтов будет реализовано через Telegram client API. Не вводите коды входа в сторонние формы.'),
-          ),
-          const _SectionTitle('ЗАЩИТА'),
-          _switchTile(
-            icon: Icons.lock_outline,
-            title: 'Блокировка приложения',
-            subtitle: 'Переключатель прототипа локальной защиты',
-            value: appLock,
-            onChanged: (value) => setState(() => appLock = value),
-          ),
-          const SizedBox(height: 20),
-          const Center(
-            child: Text('DARKTG • Prototype 0.3.0', style: TextStyle(color: Colors.white54)),
-          ),
-          const SizedBox(height: 24),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _TopBar({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(14),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 12, 18, 24),
+            child: Text(
+              'Ghost Mode фильтрует исходящие запросы, которые отправляет DARKTG. Он не отменяет события, уже обработанные Telegram, и не гарантирует скрытие всех типов активности.',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
             ),
-            child: const Icon(Icons.bolt, color: accent, size: 26),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white60)),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.more_horiz),
           ),
         ],
       ),
@@ -360,63 +390,26 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+class _SettingsSection extends StatelessWidget {
   final String title;
-  const _SectionTitle(this.title);
+  const _SettingsSection(this.title);
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: accent,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.bold,
-            ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+    child: Text(title, style: const TextStyle(
+      color: accent, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2,
+    )),
+  );
 }
 
-class _SettingTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _SettingTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: accent),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right, color: Colors.white38),
-      onTap: onTap,
-    );
-  }
-}
-
-void _showInfo(BuildContext context, String title, String message) {
+void _showUnavailable(BuildContext context, String title, String message) {
   showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
       title: Text(title),
       content: Text(message),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Понятно'),
-        ),
-      ],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('ОК'))],
     ),
   );
 }

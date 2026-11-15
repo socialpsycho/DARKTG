@@ -11,6 +11,7 @@ class GhostModeService {
   bool hideReadReceipts = false;
   bool hideTyping = false;
   bool hideOnlineStatus = false;
+  bool useCustomDeviceModel = true;
 
   /// True when at least one Ghost Mode protection is enabled.
   bool get isGhostModeEnabled => enabled;
@@ -24,6 +25,18 @@ class GhostModeService {
         _preferences!.getBool('ghost_hide_read_receipts') ?? false;
     hideTyping = _preferences!.getBool('ghost_hide_typing') ?? false;
     hideOnlineStatus = _preferences!.getBool('ghost_hide_online') ?? false;
+    useCustomDeviceModel = _preferences!.getBool('darktg_custom_device_model') ?? true;
+  }
+
+  Future<void> setAllEnabled(bool value) async {
+    await setHideReadReceipts(value);
+    await setHideTyping(value);
+    await setHideOnlineStatus(value);
+  }
+
+  Future<void> setUseCustomDeviceModel(bool value) async {
+    useCustomDeviceModel = value;
+    await _preferences?.setBool('darktg_custom_device_model', value);
   }
 
   Future<void> setHideReadReceipts(bool value) async {
