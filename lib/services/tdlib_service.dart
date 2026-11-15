@@ -218,6 +218,9 @@ class TdlibService {
     });
   }
 
+  // App-level equivalent of the "send code" step.
+  void sendCode(String phoneNumber) => setPhoneNumber(phoneNumber);
+
   void setPhoneNumber(String phoneNumber) => _sendAuthenticationRequest({
     '@type': 'setAuthenticationPhoneNumber',
     'phone_number': phoneNumber.trim(),
@@ -226,6 +229,20 @@ class TdlibService {
 
   void checkCode(String code) =>
       _sendAuthenticationRequest({'@type': 'checkAuthenticationCode', 'code': code.trim()});
+
+  // App-level equivalent of the "sign in with code" step.
+  void signIn(String code) => checkCode(code);
+
+  void setEmailAddress(String emailAddress) =>
+      _sendAuthenticationRequest({
+        '@type': 'setAuthenticationEmailAddress',
+        'email_address': emailAddress.trim(),
+      });
+
+  void checkEmailCode(String code) => _sendAuthenticationRequest({
+    '@type': 'checkAuthenticationEmailCode',
+    'code': code.trim(),
+  });
 
   void checkPassword(String password) => _sendAuthenticationRequest({
     '@type': 'checkAuthenticationPassword',
