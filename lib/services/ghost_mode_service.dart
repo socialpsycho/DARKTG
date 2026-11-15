@@ -59,11 +59,23 @@ class GhostModeService {
   bool shouldSuppress(Map<String, dynamic> request) {
     final type = request['@type'];
 
-    // Master policy: while any Ghost Mode protection is active, suppress
-    // read receipts and chat activity signals globally.
-    if (isGhostModeEnabled &&
-        (type == 'viewMessages' || type == 'sendChatAction')) {
-      return true;
+    if (type == 'viewMessages' && hideReadReceipts) return true;
+
+    // Recording a voice note is a typing/activity signal and is hidden by
+    // the same preference as ordinary "typing..." notifications.
+    if (type == 'sendChatAction' && hideTyping) {
+      final action = request['action'];
+      if (action is Map) {
+        final actionType = action['@type']?.toString();
+        if (actionType == 'chatActionTyping' ||
+            actionType == 'chatActionRecordingVoiceNote' ||
+            actionType == 'chatActionChoosingSticker' ||
+            actionType == 'chatActionUploadingPhoto' ||
+            actionType == 'chatActionUploadingVideo' ||
+            actionType == 'chatActionUploadingDocument') {
+          return true;
+        }
+      }
     }
 
     // TDLib has no SetOnline method: online state is controlled by
