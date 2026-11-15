@@ -14,7 +14,7 @@ class TdlibService {
   TdlibService._();
   static final TdlibService instance = TdlibService._();
 
-  static const int buildApiId = TelegramApiConfig.apiId;
+  static const int buildApiId = Config.apiId;
   static const String buildApiHash = TelegramApiConfig.apiHash;
   static bool get hasBuildCredentials =>
       buildApiId > 0 && buildApiHash.isNotEmpty;
@@ -36,8 +36,8 @@ class TdlibService {
   int get floodWaitRemainingSeconds {
     final until = _floodWaitUntil;
     if (until == null) return 0;
-    final remaining = until.difference(DateTime.now()).inSeconds;
-    return remaining > 0 ? remaining : 0;
+    final remainingMs = until.difference(DateTime.now()).inMilliseconds;
+    return remainingMs > 0 ? (remainingMs / 1000).ceil() : 0;
   }
   bool get isReady => _status == TdlibEngineStatus.ready;
   String? get lastError => _lastError;
