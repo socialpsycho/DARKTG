@@ -28,19 +28,19 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java b/
 +            } else if (position == darktgRow) {
 +                presentFragment(new DarkTgSettingsActivity());
              } else if (position == questionRow) {
-@@ -8478,1 +8480,2 @@
+@@ -8478,1 +8481,2 @@
          devicesRow = -1;
 +        darktgRow = -1;
-@@ -8602,1 +8605,2 @@
+@@ -8602,1 +8606,2 @@
                  devicesRow = rowCount++;
 +                darktgRow = rowCount++;
-@@ -11149,3 +11153,5 @@
+@@ -11149,3 +11154,5 @@
                      } else if (position == devicesRow) {
                          textCell.setTextAndIcon(LocaleController.getString("Devices", R.string.Devices), R.drawable.msg2_devices, true);
 +                    } else if (position == darktgRow) {
 +                        textCell.setTextAndIcon("DARKTG Settings", R.drawable.msg2_secret, true);
                      } else if (position == setAvatarRow) {
-@@ -11450,2 +11456,2 @@
+@@ -11450,2 +11457,2 @@
                      position == languageRow || position == dataRow || position == chatRow ||
 -                    position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
 +                    position == questionRow || position == devicesRow || position == darktgRow || position == filtersRow || position == stickersRow ||
