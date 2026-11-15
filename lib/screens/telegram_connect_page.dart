@@ -12,6 +12,8 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
   final _password = TextEditingController();
+  final _email = TextEditingController();
+  final _emailCode = TextEditingController();
   final _firstName = TextEditingController();
   final _lastName = TextEditingController();
   StreamSubscription<Map<String, dynamic>>? _subscription;
@@ -87,6 +89,14 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
             _step = 'password';
             _message = 'Введите пароль двухэтапной проверки Telegram.';
             break;
+          case 'authorizationStateWaitEmailAddress':
+            _step = 'email';
+            _message = 'Введите адрес электронной почты для подтверждения.';
+            break;
+          case 'authorizationStateWaitEmailCode':
+            _step = 'emailCode';
+            _message = 'Введите код подтверждения из электронной почты.';
+            break;
           case 'authorizationStateWaitRegistration':
             _step = 'registration';
             _message = 'Для нового аккаунта укажите имя.';
@@ -135,6 +145,18 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
     setState(() { _busy = true; _message = 'Проверяем пароль…'; });
   }
 
+  void _sendEmail() {
+    if (_email.text.trim().isEmpty) return;
+    TdlibService.instance.setEmailAddress(_email.text);
+    setState(() { _busy = true; _message = 'Отправляем запрос подтверждения…'; });
+  }
+
+  void _sendEmailCode() {
+    if (_emailCode.text.trim().isEmpty) return;
+    TdlibService.instance.checkEmailCode(_emailCode.text);
+    setState(() { _busy = true; _message = 'Проверяем код…'; });
+  }
+
   void _sendRegistration() {
     if (_firstName.text.trim().isEmpty) return;
     TdlibService.instance.registerUser(
@@ -148,6 +170,7 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
   void dispose() {
     _subscription?.cancel();
     _phone.dispose(); _code.dispose(); _password.dispose();
+    _email.dispose(); _emailCode.dispose();
     _firstName.dispose(); _lastName.dispose();
     super.dispose();
   }
@@ -183,6 +206,14 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
         if (_step == 'password') ...[
           _field(_password, 'Пароль двухэтапной проверки', secret: true),
           FilledButton(onPressed: _busy ? null : _sendPassword, child: const Text('Подтвердить')),
+        ],
+        if (_step == 'email') ...[
+          _field(_email, 'Электронная почта', keyboard: TextInputType.emailAddress),
+          FilledButton(onPressed: _busy ? null : _sendEmail, child: const Text('Продолжить')),
+        ],
+        if (_step == 'emailCode') ...[
+          _field(_emailCode, 'Код из письма', keyboard: TextInputType.number),
+          FilledButton(onPressed: _busy ? null : _sendEmailCode, child: const Text('Подтвердить')),
         ],
         if (_step == 'registration') ...[
           _field(_firstName, 'Имя'),
