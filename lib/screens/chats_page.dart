@@ -60,7 +60,7 @@ class _ChatsPageState extends State<ChatsPage> {
     } else if (t == 'updateNewMessage') {
       final m = e['message'];
       if (m is Map && m['chat_id'] is int && _chats.containsKey(m['chat_id'])) {
-        setState(() => _chats[m['chat_id']]['last_message'] = m);
+        setState(() => _chats[m['chat_id']]!['last_message'] = m);
       }
     } else if (t == 'updateChatTitle' || t == 'updateChatLastMessage' ||
         t == 'updateChatPosition' || t == 'updateChatReadOutbox' || t == 'updateChatUnreadCount') {
