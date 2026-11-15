@@ -29,6 +29,7 @@ class TdlibService {
   SendPort? _workerPort;
   String? _lastError;
   bool _parametersConfigured = false;
+  bool _autoDownloadConfigured = false;
   DateTime? _floodWaitUntil;
   Map<String, dynamic>? _lastAuthorizationState;
   int _nextRequestId = 0;
@@ -152,6 +153,55 @@ class TdlibService {
     if (type == 'authorizationStateWaitTdlibParameters' &&
         !_parametersConfigured) {
       unawaited(_configureInitialParameters());
+    }
+    if (type == 'authorizationStateReady') {
+      unawaited(configureAutoDownloadSettings());
+    }
+  }
+
+  /// Set conservative automatic download limits on mobile data, higher limits
+  /// on Wi-Fi, and disable automatic downloads while roaming.
+  Future<void> configureAutoDownloadSettings() async {
+    if (_autoDownloadConfigured || !isReady) return;
+    _autoDownloadConfigured = true;
+    const profiles = <Map<String, dynamic>>[
+      {
+        'type': 'autoDownloadSettingsTypeMobile',
+        'enabled': true,
+        'max_file_size': 10 * 1024 * 1024,
+        'bitrate': 512000,
+      },
+      {
+        'type': 'autoDownloadSettingsTypeWiFi',
+        'enabled': true,
+        'max_file_size': 100 * 1024 * 1024,
+        'bitrate': 2000000,
+      },
+      {
+        'type': 'autoDownloadSettingsTypeRoaming',
+        'enabled': false,
+        'max_file_size': 0,
+        'bitrate': 0,
+      },
+    ];
+    for (final profile in profiles) {
+      try {
+        await requestRaw({
+          '@type': 'setAutoDownloadSettings',
+          'type': {'@type': profile['type']},
+          'settings': {
+            '@type': 'autoDownloadSettings',
+            'is_auto_download_enabled': profile['enabled'],
+            'max_file_size': profile['max_file_size'],
+            'video_upload_bitrate': profile['bitrate'],
+            'preload_large_videos': false,
+            'preload_next_audio': true,
+            'use_less_data': profile['type'] != 'autoDownloadSettingsTypeWiFi',
+          },
+        });
+      } catch (error) {
+        debugPrint('[DARKTG][TDLib] Auto-download settings failed: ' + error.toString());
+      }
     }
   }
 
@@ -384,6 +434,7 @@ class TdlibService {
     _status = TdlibEngineStatus.notStarted;
     _lastError = null;
     _parametersConfigured = false;
+    _autoDownloadConfigured = false;
     _lastAuthorizationState = null;
     _floodWaitUntil = null;
     for (final completer in _pendingRequests.values) {
