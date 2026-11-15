@@ -85,6 +85,7 @@ class TdlibService {
       _events.add({'@type': 'darktgTdlibReady'});
     } else if (type == 'error') {
       _lastError = message['message']?.toString() ?? 'TDLib worker error';
+      debugPrint('[DARKTG][TDLib] Worker error: $_lastError');
       _status = TdlibEngineStatus.failed;
       _events.add({'@type': 'darktgTdlibError', 'message': _lastError});
     } else if (type == 'update' && message['event'] is Map) {
