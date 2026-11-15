@@ -17,11 +17,7 @@ class _GhostModeSettingsPageState extends State<GhostModeSettingsPage> {
     setState(() => _busy = true);
     await action();
     if (onlineHidden != null && TdlibService.instance.isReady) {
-      TdlibService.instance.sendRawRequest({
-        '@type': 'setOption',
-        'name': 'online',
-        'value': {'@type': 'optionValueBoolean', 'value': !onlineHidden},
-      });
+      TdlibService.instance.setOnline(!onlineHidden);
     }
     if (mounted) setState(() => _busy = false);
   }
