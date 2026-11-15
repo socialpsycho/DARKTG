@@ -5,6 +5,7 @@ import 'dart:isolate';
 
 import 'package:handy_tdlib_next/handy_tdlib_next.dart';
 import 'package:path_provider/path_provider.dart';
+import '../core/telegram/config.dart';
 import 'ghost_mode_service.dart';
 
 enum TdlibEngineStatus { notStarted, starting, ready, unsupportedPlatform, failed }
@@ -13,9 +14,8 @@ class TdlibService {
   TdlibService._();
   static final TdlibService instance = TdlibService._();
 
-  // Supplied by the release/build pipeline; never committed to source control.
-  static const int buildApiId = int.fromEnvironment('DARKTG_API_ID');
-  static const String buildApiHash = String.fromEnvironment('DARKTG_API_HASH');
+  static const int buildApiId = TelegramApiConfig.apiId;
+  static const String buildApiHash = TelegramApiConfig.apiHash;
   static bool get hasBuildCredentials =>
       buildApiId > 0 && buildApiHash.isNotEmpty;
 
@@ -27,8 +27,18 @@ class TdlibService {
   Isolate? _isolate;
   SendPort? _workerPort;
   String? _lastError;
+  bool _parametersConfigured = false;
+  DateTime? _floodWaitUntil;
+  Map<String, dynamic>? _lastAuthorizationState;
 
   TdlibEngineStatus get status => _status;
+  Map<String, dynamic>? get lastAuthorizationState => _lastAuthorizationState;
+  int get floodWaitRemainingSeconds {
+    final until = _floodWaitUntil;
+    if (until == null) return 0;
+    final remaining = until.difference(DateTime.now()).inSeconds;
+    return remaining > 0 ? remaining : 0;
+  }
   bool get isReady => _status == TdlibEngineStatus.ready;
   String? get lastError => _lastError;
   Stream<Map<String, dynamic>> get events => _events.stream;
@@ -72,6 +82,21 @@ class TdlibService {
       try {
         final decoded = jsonDecode(message['raw'] as String);
         if (decoded is Map<String, dynamic>) {
+          if (decoded['@type'] == 'error') {
+            _handleTdlibError(decoded);
+            return;
+          }
+          if (decoded['@type'] == 'updateAuthorizationState') {
+            final auth = decoded['authorization_state'];
+            if (auth is Map) {
+              _lastAuthorizationState = Map<String, dynamic>.from(auth);
+              if (auth['@type'] == 'authorizationStateWaitTdlibParameters' &&
+                  !_parametersConfigured) {
+                _parametersConfigured = true;
+                unawaited(_configureInitialParameters());
+              }
+            }
+          }
           _events.add(decoded);
           final auth = decoded['authorization_state'];
           if (decoded['@type'] == 'updateAuthorizationState' &&
@@ -96,18 +121,67 @@ class TdlibService {
   }
 
   Future<void> configureFromBuild() async {
-    if (!hasBuildCredentials) {
-      throw StateError(
-        'Сборка DARKTG пока не настроена: владелец приложения должен добавить DARKTG_API_ID и DARKTG_API_HASH в GitHub Actions Secrets.',
+    if (_parametersConfigured) return;
+    _parametersConfigured = true;
+    try {
+      await configure(
+        apiId: buildApiId,
+        apiHash: buildApiHash,
+        systemLanguageCode: TelegramApiConfig.systemLanguageCode,
+        deviceModel: TelegramApiConfig.deviceModel,
+        applicationVersion: TelegramApiConfig.applicationVersion,
       );
+    } catch (_) {
+      _parametersConfigured = false;
+      rethrow;
     }
-    await configure(
-      apiId: buildApiId,
-      apiHash: buildApiHash,
-      systemLanguageCode: 'ru',
-      deviceModel: 'DARKTG Android',
-      applicationVersion: '0.5.0',
+  }
+
+  Future<void> _configureInitialParameters() async {
+    try {
+      await configureFromBuild();
+      _events.add({'@type': 'darktgTdlibParametersConfigured'});
+    } catch (error) {
+      _events.add({
+        '@type': 'error',
+        'message': 'Не удалось настроить TDLib: $error',
+      });
+    }
+  }
+
+  void _handleTdlibError(Map<String, dynamic> error) {
+    final message = error['message']?.toString() ?? 'Неизвестная ошибка TDLib';
+    final pattern = RegExp(
+      r'(?:FLOOD_WAIT_|retry after\\s+)(\\d+)',
+      caseSensitive: false,
     );
+    final match = pattern.firstMatch(message);
+    if (match != null) {
+      final seconds = int.tryParse(match.group(1) ?? '') ?? 0;
+      if (seconds > 0) {
+        _floodWaitUntil = DateTime.now().add(Duration(seconds: seconds));
+        _events.add({
+          '@type': 'darktgFloodWait',
+          'seconds': seconds,
+          'message': message,
+        });
+        return;
+      }
+    }
+    _events.add(error);
+  }
+
+  void _sendAuthenticationRequest(Map<String, dynamic> request) {
+    final remaining = floodWaitRemainingSeconds;
+    if (remaining > 0) {
+      _events.add({
+        '@type': 'darktgFloodWait',
+        'seconds': remaining,
+        'message': 'Подождите перед следующей попыткой авторизации.',
+      });
+      return;
+    }
+    sendRawRequest(request);
   }
 
   Future<void> configure({
@@ -144,25 +218,37 @@ class TdlibService {
     });
   }
 
-  void setPhoneNumber(String phoneNumber) => sendRawRequest({
+  void setPhoneNumber(String phoneNumber) => _sendAuthenticationRequest({
     '@type': 'setAuthenticationPhoneNumber',
     'phone_number': phoneNumber.trim(),
     'settings': {'@type': 'phoneNumberAuthenticationSettings'},
   });
 
   void checkCode(String code) =>
-      sendRawRequest({'@type': 'checkAuthenticationCode', 'code': code.trim()});
+      _sendAuthenticationRequest({'@type': 'checkAuthenticationCode', 'code': code.trim()});
 
-  void checkPassword(String password) => sendRawRequest({
+  void checkPassword(String password) => _sendAuthenticationRequest({
     '@type': 'checkAuthenticationPassword',
     'password': password,
   });
+
+  void registerUser({required String firstName, String lastName = ''}) {
+    _sendAuthenticationRequest({
+      '@type': 'registerUser',
+      'first_name': firstName.trim(),
+      'last_name': lastName.trim(),
+      'disable_notification': false,
+    });
+  }
 
   void dispose() {
     _workerPort?.send({'type': 'close'});
     _receivePort?.close();
     _isolate?.kill(priority: Isolate.immediate);
     _status = TdlibEngineStatus.notStarted;
+    _parametersConfigured = false;
+    _lastAuthorizationState = null;
+    _floodWaitUntil = null;
     _workerPort = null;
     _isolate = null;
     _receivePort = null;
@@ -174,6 +260,7 @@ Future<void> _tdlibWorker(SendPort mainPort) async {
   try {
     await TdPlugin.initialize();
     final clientId = TdPlugin.instance.tdCreateClientId();
+    var shouldStop = false;
     commands.listen((dynamic command) {
       if (command is Map && command['type'] == 'send') {
         final request = command['request'];
@@ -181,14 +268,17 @@ Future<void> _tdlibWorker(SendPort mainPort) async {
           TdPlugin.instance.tdSend(clientId, jsonEncode(request));
         }
       } else if (command is Map && command['type'] == 'close') {
-        commands.close();
+        shouldStop = true;
+        TdPlugin.instance.tdSend(clientId, jsonEncode({'@type': 'close'}));
       }
     });
     mainPort.send({'type': 'ready', 'port': commands.sendPort});
-    while (true) {
-      final raw = TdPlugin.instance.tdReceive(1);
+    while (!shouldStop) {
+      final raw = TdPlugin.instance.tdReceive(0.25);
       if (raw != null) mainPort.send({'type': 'update', 'raw': raw});
+      await Future<void>.delayed(Duration.zero);
     }
+    commands.close();
   } catch (error) {
     mainPort.send({'type': 'error', 'message': error.toString()});
     commands.close();
