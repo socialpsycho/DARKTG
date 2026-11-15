@@ -132,12 +132,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         .toList();
     if (ids.isEmpty) return;
     try {
-      TdlibService.instance.sendRawRequest({
-        '@type': 'viewMessages',
-        'chat_id': widget.chatId,
-        'message_ids': ids,
-        'force_read': false,
-      });
+      TdlibService.instance.viewMessages(
+        chatId: widget.chatId,
+        messageIds: ids,
+      );
     } catch (_) {}
   }
 
@@ -147,11 +145,10 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
         now.difference(_lastTypingAction!) < const Duration(seconds: 4)) return;
     _lastTypingAction = now;
     try {
-      TdlibService.instance.sendRawRequest({
-        '@type': 'sendChatAction',
-        'chat_id': widget.chatId,
-        'action': {'@type': 'chatActionTyping'},
-      });
+      TdlibService.instance.sendChatAction(
+        chatId: widget.chatId,
+        action: {'@type': 'chatActionTyping'},
+      );
     } catch (_) {}
   }
 
