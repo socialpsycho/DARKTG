@@ -5,7 +5,7 @@ import 'core/telegram/config.dart';
 import 'services/tdlib_service.dart';
 import 'services/local_message_archive.dart';
 import 'services/ghost_mode_service.dart';
-import 'screens/telegram_connect_page.dart';
+import 'screens/auth_page.dart';
 import 'screens/chats_page.dart';
 import 'screens/contacts_page.dart';
 import 'screens/active_sessions_page.dart';
@@ -137,7 +137,7 @@ class _AuthorizationGateState extends State<AuthorizationGate> {
     };
 
     if (_authorizationType != null && authStates.contains(_authorizationType)) {
-      return const TelegramConnectPage();
+      return const AuthPage();
     }
 
     return const Scaffold(

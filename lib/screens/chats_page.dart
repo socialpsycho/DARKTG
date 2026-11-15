@@ -156,6 +156,7 @@ class _ChatsPageState extends State<ChatsPage> {
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
                 leading: CacheService.instance.avatar(
+                  fileId: CacheService.instance.fileIdFromChat(chat),
                   imageUrl: CacheService.instance.imageUrlFromChat(chat),
                   localPath: CacheService.instance.localPathFromChat(chat),
                   fallbackText: title,
