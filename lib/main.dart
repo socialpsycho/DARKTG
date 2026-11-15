@@ -1,16 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import 'core/telegram/config.dart';
 import 'services/tdlib_service.dart';
 import 'services/local_message_archive.dart';
 import 'services/ghost_mode_service.dart';
 import 'screens/auth_page.dart';
 import 'screens/chats_page.dart';
 import 'screens/contacts_page.dart';
-import 'screens/active_sessions_page.dart';
-import 'screens/privacy_settings_page.dart';
-import 'screens/data_memory_page.dart';
 import 'screens/settings_page.dart';
 
 Future<void> main() async {
@@ -205,15 +201,4 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-}
-
-void _showUnavailable(BuildContext context, String title, String message) {
-  showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('ОК'))],
-    ),
-  );
 }
