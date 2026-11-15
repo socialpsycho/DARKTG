@@ -241,7 +241,10 @@ class TdlibService {
 
   void checkEmailCode(String code) => _sendAuthenticationRequest({
     '@type': 'checkAuthenticationEmailCode',
-    'code': code.trim(),
+    'code': {
+      '@type': 'emailAddressAuthenticationCode',
+      'code': code.trim(),
+    },
   });
 
   void checkPassword(String password) => _sendAuthenticationRequest({
