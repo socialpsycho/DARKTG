@@ -151,7 +151,7 @@ class TdlibService {
   void _handleTdlibError(Map<String, dynamic> error) {
     final message = error['message']?.toString() ?? 'Неизвестная ошибка TDLib';
     final pattern = RegExp(
-      r'(?:FLOOD_WAIT_|retry after\\s+)(\\d+)',
+      r'(?:FLOOD_WAIT_|retry after\s+)(\d+)',
       caseSensitive: false,
     );
     final match = pattern.firstMatch(message);
@@ -202,6 +202,7 @@ class TdlibService {
       '@type': 'setTdlibParameters',
       'database_directory': root.path,
       'files_directory': files.path,
+      'database_encryption_key': '',
       'use_file_database': true,
       'use_chat_info_database': true,
       'use_message_database': true,
