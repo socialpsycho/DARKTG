@@ -22,6 +22,8 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
   DateTime? _lastTypingAction;
   String? _error;
 
+  int _asInt(dynamic value) => value is int ? value : int.tryParse(value?.toString() ?? '') ?? 0;
+
   @override
   void initState() {
     super.initState();
@@ -54,7 +56,7 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
           _messages
             ..clear()
             ..addAll(list.whereType<Map>().map((m) => Map<String, dynamic>.from(m)));
-          _messages.sort((a, b) => ((a['date'] as int?) ?? 0).compareTo((b['date'] as int?) ?? 0));
+          _messages.sort((a, b) => _asInt(a['date']).compareTo(_asInt(b['date'])));
           _loading = false;
         });
         _markMessagesRead(_messages);

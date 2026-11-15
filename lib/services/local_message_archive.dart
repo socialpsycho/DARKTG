@@ -19,6 +19,8 @@ class LocalMessageArchive {
   bool _initialized = false;
   bool enabled = true;
 
+  int _asInt(dynamic value) => value is int ? value : int.tryParse(value?.toString() ?? '') ?? 0;
+
   Future<void> initialize() async {
     if (_initialized) return;
     final preferences = await SharedPreferences.getInstance();
@@ -133,8 +135,8 @@ class LocalMessageArchive {
         .where((record) => record['chat_id'] == chatId)
         .map((record) => Map<String, dynamic>.from(record))
         .toList()
-      ..sort((a, b) => ((a['first_seen_at'] as int?) ?? 0)
-          .compareTo((b['first_seen_at'] as int?) ?? 0));
+      ..sort((a, b) => _asInt(a['first_seen_at'])
+          .compareTo(_asInt(b['first_seen_at'])));
     return result;
   }
 

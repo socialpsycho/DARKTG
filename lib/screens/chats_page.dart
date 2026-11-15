@@ -14,6 +14,8 @@ class _ChatsPageState extends State<ChatsPage> {
   final Map<int, Map<String, dynamic>> _chats = {};
   StreamSubscription<Map<String, dynamic>>? _subscription;
   String _query = '';
+
+  int _asInt(dynamic value) => value is int ? value : int.tryParse(value?.toString() ?? '') ?? 0;
   bool _loading = false;
   String? _error;
 
@@ -107,8 +109,8 @@ class _ChatsPageState extends State<ChatsPage> {
       (chat['title']?.toString().toLowerCase() ?? '').contains(_query.toLowerCase())).toList()
       ..sort((a, b) {
         final ap = a['positions']; final bp = b['positions'];
-        final ao = ap is List && ap.isNotEmpty && ap.first is Map ? (ap.first['order'] as int? ?? 0) : 0;
-        final bo = bp is List && bp.isNotEmpty && bp.first is Map ? (bp.first['order'] as int? ?? 0) : 0;
+        final ao = ap is List && ap.isNotEmpty && ap.first is Map ? _asInt(ap.first['order']) : 0;
+        final bo = bp is List && bp.isNotEmpty && bp.first is Map ? _asInt(bp.first['order']) : 0;
         return bo.compareTo(ao);
       });
 
@@ -148,7 +150,7 @@ class _ChatsPageState extends State<ChatsPage> {
             separatorBuilder: (_, __) => const Divider(height: 1, indent: 84, color: Color(0xFF29263A)),
             itemBuilder: (context, index) {
               final chat = chats[index];
-              final id = chat['id'] as int;
+              final id = _asInt(chat['id']);
               final title = chat['title']?.toString() ?? 'Чат';
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
