@@ -1,26 +1,26 @@
-# DARKTG Roadmap
+# DARKTG Native Android Roadmap
 
-## Phase 1 — UI foundation
-- [x] Flutter application shell
-- [x] Chats, Contacts and Settings tabs
-- [x] DARKTG settings prototype
-- [ ] Responsive polish and accessibility review
+## Phase 1 — Native base
+- [x] Preserve the previous Flutter implementation on \`main\`
+- [x] Create \`native-migration\` branch
+- [x] Pin Telegram-FOSS as a Git submodule
+- [x] Remove Dart sources and Flutter package configuration from this branch
+- [x] Add Ghost Mode manager and native settings screen source
+- [ ] Apply and compile the native overlay against the pinned upstream revision
+- [ ] Verify login, chats, profile, and settings on a physical Android device
 
-## Phase 2 — Telegram connectivity
-- [x] Select TDLib JSON integration for the Android prototype
-- [x] Add the Android TDLib engine bootstrap and client ID bridge
-- [x] Add in-app authentication UI and TDLib request methods (device verification pending)\n- [ ] Verify secure authentication end-to-end on an Android device
-- [x] Add a background TDLib receive worker and authorization-state event handling
-- [ ] Load chats, contacts and message history
-- [ ] Handle session data securely on-device
+## Phase 2 — Privacy controls
+- [x] Add independent preferences for online, read receipts, and typing controls
+- [x] Add an outgoing MTProto request filter for the relevant request classes
+- [ ] Audit all request paths, including channel reads and voice-chat activity
+- [ ] Add automated tests for request filtering and preference persistence
+- [ ] Verify behavior against server-side updates and multi-account state
 
-## Phase 3 — Supported features
-- [ ] Local themes and interface customization
-- [ ] Translation workflow
-- [ ] Local audio effects
-- [ ] Multiple-account management
-- [ ] Local app lock
-- [ ] Message history for content already received by the client
+## Phase 3 — DARKTG features
+- [ ] Add DARKTG branding and app identity without using Telegram's official name/logo as the app identity
+- [ ] Implement additional customization behind native settings
+- [ ] Review storage, background operation, and battery behavior
+- [ ] Publish corresponding source and license notices for distributed builds
 
-## Privacy and platform limits
-DARKTG will respect Telegram's API, account security, protected-content settings and platform rules. It cannot recover messages that were deleted before the client received them or bypass protected-media restrictions. Any presence or read-state controls must be implemented only where supported by the Telegram API and must not be represented as guaranteed invisibility.
+## Platform scope
+This migration branch targets native Android (Java/Kotlin) using Telegram-FOSS. It does not provide an iOS build. Telegram-FOSS is GPL-2.0; preserve its notices and comply with source-distribution requirements.
