@@ -30,6 +30,9 @@ jobs:
       - name: Generate Android platform files
         run: flutter create . --platforms=android --project-name darktg
 
+      - name: Add microphone permission
+        run: sed -i '/<application/i\    <uses-permission android:name="android.permission.RECORD_AUDIO" />' android/app/src/main/AndroidManifest.xml
+
       - name: Apply DARKTG app icon and branding
         run: bash tool/setup_android_brand.sh
 
