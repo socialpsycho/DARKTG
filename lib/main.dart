@@ -76,6 +76,8 @@ class AuthorizationGate extends StatefulWidget {
 class _AuthorizationGateState extends State<AuthorizationGate> {
   StreamSubscription<Map<String, dynamic>>? _subscription;
   String? _authorizationType;
+  String? _startupError;
+  Timer? _startupTimer;
   bool isAuthorized = false;
 
   @override
@@ -85,33 +87,80 @@ class _AuthorizationGateState extends State<AuthorizationGate> {
     _authorizationType = initial?['@type']?.toString();
     isAuthorized = _authorizationType == 'authorizationStateReady';
     _subscription = TdlibService.instance.events.listen(_onEvent);
+    if (_authorizationType == null) _armStartupTimeout();
+  }
+
+  void _armStartupTimeout() {
+    _startupTimer?.cancel();
+    _startupTimer = Timer(const Duration(seconds: 20), () {
+      if (!mounted || _authorizationType != null || isAuthorized) return;
+      setState(() {
+        _startupError = 'Превышено время ожидания ответа от сервера';
+      });
+    });
   }
 
   void _onEvent(Map<String, dynamic> event) {
-    if (!mounted || event['@type'] != 'updateAuthorizationState') return;
+    if (!mounted) return;
+    final eventType = event['@type'];
+    if (eventType == 'darktgTdlibError' ||
+        eventType == 'darktgTdlibStartupError') {
+      _startupTimer?.cancel();
+      setState(() {
+        _startupError = event['message']?.toString() ?? 'Ошибка запуска TDLib';
+      });
+      return;
+    }
+    if (eventType != 'updateAuthorizationState') return;
     final state = event['authorization_state'];
     if (state is! Map) return;
     final next = state['@type']?.toString();
+    _startupTimer?.cancel();
     setState(() {
+      _startupError = null;
       _authorizationType = next;
       isAuthorized = next == 'authorizationStateReady';
     });
   }
 
+  Future<void> _retryStartup() async {
+    _startupTimer?.cancel();
+    setState(() {
+      _startupError = null;
+      _authorizationType = null;
+      isAuthorized = false;
+    });
+    _armStartupTimeout();
+    await TdlibService.instance.retryInitialization();
+    if (!mounted) return;
+    final state = TdlibService.instance.lastAuthorizationState;
+    if (state != null) {
+      _startupTimer?.cancel();
+      final next = state['@type']?.toString();
+      setState(() {
+        _authorizationType = next;
+        isAuthorized = next == 'authorizationStateReady';
+      });
+    }
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();
+    _startupTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final status = TdlibService.instance.status;
-    if (status == TdlibEngineStatus.failed ||
+    if (_startupError != null ||
+        status == TdlibEngineStatus.failed ||
         status == TdlibEngineStatus.unsupportedPlatform) {
       return _StartupError(
-        message: TdlibService.instance.lastError ??
+        message: _startupError ?? TdlibService.instance.lastError ??
             'TDLib недоступна на этой платформе.',
+        onRetry: _retryStartup,
       );
     }
 
@@ -154,7 +203,8 @@ class _AuthorizationGateState extends State<AuthorizationGate> {
 
 class _StartupError extends StatelessWidget {
   final String message;
-  const _StartupError({required this.message});
+  final VoidCallback onRetry;
+  const _StartupError({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -164,9 +214,16 @@ class _StartupError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Colors.orange, size: 42),
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
             const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center),
+            Text(message, textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent)),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Повторить'),
+            ),
           ],
         ),
       ),
