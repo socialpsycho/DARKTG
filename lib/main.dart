@@ -8,6 +8,8 @@ import 'services/ghost_mode_service.dart';
 import 'screens/telegram_connect_page.dart';
 import 'screens/chats_page.dart';
 import 'screens/contacts_page.dart';
+import 'screens/active_sessions_page.dart';
+import 'screens/privacy_settings_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -229,7 +231,9 @@ class SettingsPage extends StatelessWidget {
         _SettingsRow(
           icon: Icons.lock_outline,
           title: 'Конфиденциальность и безопасность',
-          onTap: () => _showUnavailable(context, 'Конфиденциальность и безопасность', 'Системные настройки Telegram будут добавляться через поддерживаемые методы TDLib.'),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => const PrivacySettingsPage(),
+          )),
         ),
         _SettingsRow(
           icon: Icons.data_usage,
@@ -239,7 +243,9 @@ class SettingsPage extends StatelessWidget {
         _SettingsRow(
           icon: Icons.devices,
           title: 'Устройства',
-          onTap: () => _showUnavailable(context, 'Устройства', 'Список активных сессий будет подключён через getActiveSessions.'),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => const ActiveSessionsPage(),
+          )),
         ),
         const Divider(indent: 18, endIndent: 18),
         Padding(
