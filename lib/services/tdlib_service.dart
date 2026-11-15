@@ -166,21 +166,27 @@ class TdlibService {
     _autoDownloadConfigured = true;
     const profiles = <Map<String, dynamic>>[
       {
-        'type': 'autoDownloadSettingsTypeMobile',
+        'type': 'networkTypeMobile',
         'enabled': true,
-        'max_file_size': 10 * 1024 * 1024,
-        'bitrate': 512000,
+        'photo': 5 * 1024 * 1024,
+        'video': 10 * 1024 * 1024,
+        'other': 5 * 1024 * 1024,
+        'bitrate': 512,
       },
       {
-        'type': 'autoDownloadSettingsTypeWiFi',
+        'type': 'networkTypeWiFi',
         'enabled': true,
-        'max_file_size': 100 * 1024 * 1024,
-        'bitrate': 2000000,
+        'photo': 20 * 1024 * 1024,
+        'video': 100 * 1024 * 1024,
+        'other': 100 * 1024 * 1024,
+        'bitrate': 2000,
       },
       {
-        'type': 'autoDownloadSettingsTypeRoaming',
+        'type': 'networkTypeMobileRoaming',
         'enabled': false,
-        'max_file_size': 0,
+        'photo': 0,
+        'video': 0,
+        'other': 0,
         'bitrate': 0,
       },
     ];
@@ -192,11 +198,14 @@ class TdlibService {
           'settings': {
             '@type': 'autoDownloadSettings',
             'is_auto_download_enabled': profile['enabled'],
-            'max_file_size': profile['max_file_size'],
+            'max_photo_file_size': profile['photo'],
+            'max_video_file_size': profile['video'],
+            'max_other_file_size': profile['other'],
             'video_upload_bitrate': profile['bitrate'],
             'preload_large_videos': false,
             'preload_next_audio': true,
-            'use_less_data': profile['type'] != 'autoDownloadSettingsTypeWiFi',
+            'preload_stories': false,
+            'use_less_data_for_calls': profile['type'] != 'networkTypeWiFi',
           },
         });
       } catch (error) {
