@@ -20,7 +20,6 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
   String _step = 'loading';
   String _message = 'Запускаем защищённое подключение…';
   bool _busy = false;
-  bool _configured = false;
 
   @override
   void initState() {
@@ -100,6 +99,14 @@ class _TelegramConnectPageState extends State<TelegramConnectPage> {
           case 'authorizationStateWaitRegistration':
             _step = 'registration';
             _message = 'Для нового аккаунта укажите имя.';
+            break;
+          case 'authorizationStateWaitOtherDeviceConfirmation':
+            _step = 'waiting';
+            _message = 'Подтвердите вход на другом устройстве Telegram.';
+            break;
+          case 'authorizationStateWaitPremiumPurchase':
+            _step = 'error';
+            _message = 'Telegram запросил дополнительное подтверждение для входа. Этот шаг пока не поддержан DARKTG.';
             break;
           case 'authorizationStateReady':
             _step = 'ready';
