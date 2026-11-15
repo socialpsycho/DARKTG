@@ -30,6 +30,8 @@ class TdlibService {
   bool _parametersConfigured = false;
   DateTime? _floodWaitUntil;
   Map<String, dynamic>? _lastAuthorizationState;
+  int _nextRequestId = 0;
+  final Map<String, Completer<Map<String, dynamic>>> _pendingRequests = {};
 
   TdlibEngineStatus get status => _status;
   Map<String, dynamic>? get lastAuthorizationState => _lastAuthorizationState;
@@ -78,14 +80,25 @@ class TdlibService {
       _lastError = message['message']?.toString() ?? 'TDLib worker error';
       _status = TdlibEngineStatus.failed;
       _events.add({'@type': 'darktgTdlibError', 'message': _lastError});
-    } else if (type == 'update' && message['raw'] is String) {
-      try {
-        final decoded = jsonDecode(message['raw'] as String);
-        if (decoded is Map<String, dynamic>) {
+    } else if (type == 'update' && message['event'] is Map) {
+      final decoded = Map<String, dynamic>.from(message['event'] as Map);
+      final extra = decoded['@extra']?.toString();
+      if (extra != null) {
+        final completer = _pendingRequests.remove(extra);
+        if (completer != null) {
           if (decoded['@type'] == 'error') {
-            _handleTdlibError(decoded);
-            return;
+            completer.completeError(StateError(decoded['message']?.toString() ?? 'TDLib request failed'));
+          } else {
+            completer.complete(decoded);
           }
+          return;
+        }
+      }
+      try {
+        if (decoded['@type'] == 'error') {
+          _handleTdlibError(decoded);
+          return;
+        }
           if (decoded['@type'] == 'updateAuthorizationState') {
             final auth = decoded['authorization_state'];
             if (auth is Map) {
@@ -103,7 +116,6 @@ class TdlibService {
               GhostModeService.instance.hideOnlineStatus && isReady) {
             setOnline(false);
           }
-        }
       } catch (_) {}
     }
   }
@@ -115,6 +127,28 @@ class TdlibService {
     final port = _workerPort;
     if (!isReady || port == null) throw StateError('TDLib is not ready.');
     port.send({'type': 'send', 'request': request});
+  }
+
+  /// Sends a request and awaits its response using TDLib's @extra correlation.
+  Future<Map<String, dynamic>> requestRaw(
+    Map<String, dynamic> request, {
+    Duration timeout = const Duration(seconds: 20),
+  }) {
+    if (GhostModeService.instance.shouldSuppress(request)) {
+      return Future.error(StateError('Request blocked by Ghost Mode.'));
+    }
+    final port = _workerPort;
+    if (!isReady || port == null) {
+      return Future.error(StateError('TDLib is not ready.'));
+    }
+    final id = 'darktg-${++_nextRequestId}';
+    final completer = Completer<Map<String, dynamic>>();
+    _pendingRequests[id] = completer;
+    port.send({'type': 'send', 'request': {...request, '@extra': id}});
+    return completer.future.timeout(timeout, onTimeout: () {
+      _pendingRequests.remove(id);
+      throw TimeoutException('TDLib request timed out');
+    });
   }
 
   /// TDLib JSON wrapper for SendChatAction / ChatActionTyping.
@@ -309,6 +343,10 @@ class TdlibService {
     _parametersConfigured = false;
     _lastAuthorizationState = null;
     _floodWaitUntil = null;
+    for (final completer in _pendingRequests.values) {
+      if (!completer.isCompleted) completer.completeError(StateError('TDLib service disposed.'));
+    }
+    _pendingRequests.clear();
     _workerPort = null;
     _isolate = null;
     _receivePort = null;
@@ -335,7 +373,17 @@ Future<void> _tdlibWorker(SendPort mainPort) async {
     mainPort.send({'type': 'ready', 'port': commands.sendPort});
     while (!shouldStop) {
       final raw = TdPlugin.instance.tdReceive(0.25);
-      if (raw != null) mainPort.send({'type': 'update', 'raw': raw});
+      if (raw != null) {
+        try {
+          // Parse TDLib JSON on the worker isolate, not the UI isolate.
+          final decoded = jsonDecode(raw);
+          if (decoded is Map) {
+            mainPort.send({'type': 'update', 'event': Map<String, dynamic>.from(decoded)});
+          }
+        } catch (_) {
+          // Ignore malformed native payloads without blocking the UI isolate.
+        }
+      }
       await Future<void>.delayed(Duration.zero);
     }
     commands.close();
