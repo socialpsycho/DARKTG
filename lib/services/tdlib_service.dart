@@ -83,6 +83,19 @@ class TdlibService {
       _status = TdlibEngineStatus.ready;
       _lastError = null;
       _events.add({'@type': 'darktgTdlibReady'});
+      // Ask TDLib for its current authorization state. Some TDLib builds do
+      // not deliver the initial state until this request is made.
+      try {
+        sendRawRequest({'@type': 'getAuthorizationState'});
+        debugPrint('[DARKTG][TDLib] Sent getAuthorizationState');
+      } catch (error) {
+        _lastError = 'Не удалось запросить состояние авторизации: $error';
+        debugPrint('[DARKTG][TDLib] getAuthorizationState failed: $_lastError');
+        _events.add({
+          '@type': 'darktgTdlibStartupError',
+          'message': _lastError,
+        });
+      }
     } else if (type == 'error') {
       _lastError = message['message']?.toString() ?? 'TDLib worker error';
       debugPrint('[DARKTG][TDLib] Worker error: $_lastError');
@@ -108,16 +121,14 @@ class TdlibService {
           _handleTdlibError(decoded);
           return;
         }
-          if (decoded['@type'] == 'updateAuthorizationState') {
-            debugPrint('[DARKTG][TDLib] updateAuthorizationState: ${decoded['authorization_state']}');
+          final responseType = decoded['@type']?.toString() ?? '';
+          if (responseType == 'updateAuthorizationState') {
             final auth = decoded['authorization_state'];
-            if (auth is Map) {
-              _lastAuthorizationState = Map<String, dynamic>.from(auth);
-              if (auth['@type'] == 'authorizationStateWaitTdlibParameters' &&
-                  !_parametersConfigured) {
-                unawaited(_configureInitialParameters());
-              }
-            }
+            if (auth is Map) _acceptAuthorizationState(Map<String, dynamic>.from(auth));
+          } else if (responseType.startsWith('authorizationState')) {
+            // getAuthorizationState returns the authorizationState object
+            // directly rather than wrapping it in updateAuthorizationState.
+            _acceptAuthorizationState(decoded);
           }
           _events.add(decoded);
           final auth = decoded['authorization_state'];
@@ -127,6 +138,20 @@ class TdlibService {
             setOnline(false);
           }
       } catch (_) {}
+    }
+  }
+
+  void _acceptAuthorizationState(Map<String, dynamic> auth) {
+    final type = auth['@type']?.toString();
+    debugPrint('[DARKTG][TDLib] Authorization state: $type');
+    _lastAuthorizationState = auth;
+    _events.add({
+      '@type': 'updateAuthorizationState',
+      'authorization_state': auth,
+    });
+    if (type == 'authorizationStateWaitTdlibParameters' &&
+        !_parametersConfigured) {
+      unawaited(_configureInitialParameters());
     }
   }
 
