@@ -83,11 +83,15 @@ class _AuthorizationGateState extends State<AuthorizationGate> {
   @override
   void initState() {
     super.initState();
-    final initial = TdlibService.instance.lastAuthorizationState;
+    final service = TdlibService.instance;
+    final initial = service.lastAuthorizationState;
     _authorizationType = initial?['@type']?.toString();
+    _startupError = service.lastError;
     isAuthorized = _authorizationType == 'authorizationStateReady';
-    _subscription = TdlibService.instance.events.listen(_onEvent);
-    if (_authorizationType == null) _armStartupTimeout();
+    _subscription = service.events.listen(_onEvent);
+    if (_authorizationType == null && _startupError == null) {
+      _armStartupTimeout();
+    }
   }
 
   void _armStartupTimeout() {
