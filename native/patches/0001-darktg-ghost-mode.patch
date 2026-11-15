@@ -1,0 +1,54 @@
+diff --git a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+index 0000000..0000000 100644
+--- a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
++++ b/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java
+@@
+ import org.telegram.messenger.FileUploadOperation;
++import org.telegram.messenger.GhostModeManager;
+@@
+     private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
++        if (GhostModeManager.shouldBlockRequest(object)) {
++            if (onComplete != null) {
++                TLRPC.TL_error blocked = new TLRPC.TL_error();
++                blocked.code = 499;
++                blocked.text = "DARKTG_GHOST_MODE_BLOCKED";
++                onComplete.run(null, blocked);
++            }
++            return;
++        }
+         if (BuildVars.LOGS_ENABLED) {
+             FileLog.d("send request " + object + " with token = " + requestToken);
+         }
+diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java b/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
+index 0000000..0000000 100644
+--- a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
++++ b/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java
+@@
+     private int privacyRow;
++    private int darktgRow;
+     private int dataRow;
+@@
+         privacyRow = -1;
++        darktgRow = -1;
+         dataRow = -1;
+@@
+                 devicesRow = rowCount++;
++                darktgRow = rowCount++;
+                 languageRow = rowCount++;
+@@
+             } else if (position == devicesRow) {
+                 presentFragment(new SessionsActivity(0));
++            } else if (position == darktgRow) {
++                presentFragment(new DarkTgSettingsActivity());
+             } else if (position == questionRow) {
+@@
+                     position == languageRow || position == dataRow || position == chatRow ||
+-                    position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
++                    position == questionRow || position == devicesRow || position == darktgRow || position == filtersRow || position == stickersRow ||
+@@
+                     } else if (position == devicesRow) {
+                         textCell.setTextAndIcon(LocaleController.getString("Devices", R.string.Devices), R.drawable.msg2_devices, true);
++                    } else if (position == darktgRow) {
++                        textCell.setTextAndIcon("DARKTG Settings", R.drawable.msg2_secret, true);
+                     } else if (position == setAvatarRow) {
+                         cellCameraDrawable.setCustomEndFrame(86);

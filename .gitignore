@@ -1,0 +1,5 @@
+# Telegram API credentials and local Android build state
+Telegram-FOSS/API_KEYS
+Telegram-FOSS/local.properties
+Telegram-FOSS/.gradle/
+Telegram-FOSS/**/build/

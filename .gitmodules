@@ -1,0 +1,3 @@
+[submodule "Telegram-FOSS"]
+	path = Telegram-FOSS
+	url = https://github.com/Telegram-FOSS-Team/Telegram-FOSS.git
