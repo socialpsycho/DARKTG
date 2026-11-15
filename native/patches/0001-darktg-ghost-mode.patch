@@ -4,7 +4,7 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.j
 @@ -30,1 +30,2 @@
  import org.telegram.messenger.FileUploadOperation;
 +import org.telegram.messenger.GhostModeManager;
-@@ -347,1 +348,10 @@
+@@ -347,2 +348,11 @@
      private void sendRequestInternal(TLObject object, RequestDelegate onComplete, RequestDelegateTimestamp onCompleteTimestamp, QuickAckDelegate onQuickAck, WriteToSocketDelegate onWriteToSocket, int flags, int datacenterId, int connectionType, boolean immediate, int requestToken) {
 +        if (GhostModeManager.shouldBlockRequest(object)) {
 +            if (onComplete != null) {
@@ -22,25 +22,25 @@ diff --git a/TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java b/
 @@ -544,1 +544,2 @@
      private int privacyRow;
 +    private int darktgRow;
-@@ -8478,1 +8479,2 @@
-         devicesRow = -1;
-+        darktgRow = -1;
-@@ -8602,1 +8603,2 @@
-                 devicesRow = rowCount++;
-+                darktgRow = rowCount++;
 @@ -3832,3 +3833,5 @@
              } else if (position == devicesRow) {
                  presentFragment(new SessionsActivity(0));
 +            } else if (position == darktgRow) {
 +                presentFragment(new DarkTgSettingsActivity());
              } else if (position == questionRow) {
-@@ -11450,2 +11453,2 @@
-                     position == languageRow || position == dataRow || position == chatRow ||
--                    position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
-+                    position == questionRow || position == devicesRow || position == darktgRow || position == filtersRow || position == stickersRow ||
-@@ -11149,2 +11152,4 @@
+@@ -8478,1 +8480,2 @@
+         devicesRow = -1;
++        darktgRow = -1;
+@@ -8602,1 +8605,2 @@
+                 devicesRow = rowCount++;
++                darktgRow = rowCount++;
+@@ -11149,3 +11153,5 @@
                      } else if (position == devicesRow) {
                          textCell.setTextAndIcon(LocaleController.getString("Devices", R.string.Devices), R.drawable.msg2_devices, true);
 +                    } else if (position == darktgRow) {
 +                        textCell.setTextAndIcon("DARKTG Settings", R.drawable.msg2_secret, true);
                      } else if (position == setAvatarRow) {
+@@ -11450,2 +11456,2 @@
+                     position == languageRow || position == dataRow || position == chatRow ||
+-                    position == questionRow || position == devicesRow || position == filtersRow || position == stickersRow ||
++                    position == questionRow || position == devicesRow || position == darktgRow || position == filtersRow || position == stickersRow ||
