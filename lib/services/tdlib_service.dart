@@ -92,7 +92,6 @@ class TdlibService {
               _lastAuthorizationState = Map<String, dynamic>.from(auth);
               if (auth['@type'] == 'authorizationStateWaitTdlibParameters' &&
                   !_parametersConfigured) {
-                _parametersConfigured = true;
                 unawaited(_configureInitialParameters());
               }
             }
