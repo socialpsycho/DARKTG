@@ -326,6 +326,9 @@ class TdlibService {
     'password': password,
   });
 
+  /// Ends the current Telegram authorization session.
+  void logOut() => _sendAuthenticationRequest({'@type': 'logOut'});
+
   void registerUser({required String firstName, String lastName = ''}) {
     _sendAuthenticationRequest({
       '@type': 'registerUser',

@@ -59,19 +59,17 @@ class GhostModeService {
   bool shouldSuppress(Map<String, dynamic> request) {
     final type = request['@type'];
 
-    if (hideReadReceipts && type == 'viewMessages') {
-      return true;
-    }
-
-    // TDLib's JSON method is sendChatAction. This blocks typing, recording,
-    // uploading and other chat-action signals while the option is enabled.
-    if (hideTyping && type == 'sendChatAction') {
+    // Master policy: while any Ghost Mode protection is active, suppress
+    // read receipts and chat activity signals globally.
+    if (isGhostModeEnabled &&
+        (type == 'viewMessages' || type == 'sendChatAction')) {
       return true;
     }
 
     // TDLib has no SetOnline method: online state is controlled by
-    // setOption(name: "online", value: optionValueBoolean).
-    if (hideOnlineStatus &&
+    // setOption(name: "online"). Allow false so the client can stay offline;
+    // suppress any attempt to publish online while Ghost Mode is active.
+    if (isGhostModeEnabled &&
         (type == 'setOnline' ||
             (type == 'setOption' && request['name'] == 'online')) &&
         _onlineValue(request) == true) {
