@@ -10,6 +10,7 @@ import 'screens/chats_page.dart';
 import 'screens/contacts_page.dart';
 import 'screens/active_sessions_page.dart';
 import 'screens/privacy_settings_page.dart';
+import 'screens/data_memory_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,27 +79,26 @@ class AuthorizationGate extends StatefulWidget {
 class _AuthorizationGateState extends State<AuthorizationGate> {
   StreamSubscription<Map<String, dynamic>>? _subscription;
   String? _authorizationType;
+  bool isAuthorized = false;
 
   @override
   void initState() {
     super.initState();
-    _authorizationType = TdlibService.instance.lastAuthorizationState?['@type']?.toString();
+    final initial = TdlibService.instance.lastAuthorizationState;
+    _authorizationType = initial?['@type']?.toString();
+    isAuthorized = _authorizationType == 'authorizationStateReady';
     _subscription = TdlibService.instance.events.listen(_onEvent);
   }
 
   void _onEvent(Map<String, dynamic> event) {
-    if (!mounted) return;
-    if (event['@type'] == 'updateAuthorizationState') {
-      final state = event['authorization_state'];
-      if (state is Map) {
-        setState(() => _authorizationType = state['@type']?.toString());
-      }
-    } else if (event['@type'] == 'darktgTdlibReady') {
-      final state = TdlibService.instance.lastAuthorizationState;
-      if (state != null && mounted) {
-        setState(() => _authorizationType = state['@type']?.toString());
-      }
-    }
+    if (!mounted || event['@type'] != 'updateAuthorizationState') return;
+    final state = event['authorization_state'];
+    if (state is! Map) return;
+    final next = state['@type']?.toString();
+    setState(() {
+      _authorizationType = next;
+      isAuthorized = next == 'authorizationStateReady';
+    });
   }
 
   @override
@@ -112,11 +112,15 @@ class _AuthorizationGateState extends State<AuthorizationGate> {
     final status = TdlibService.instance.status;
     if (status == TdlibEngineStatus.failed ||
         status == TdlibEngineStatus.unsupportedPlatform) {
-      return _StartupError(message: TdlibService.instance.lastError ??
-          'TDLib недоступна на этой платформе.');
+      return _StartupError(
+        message: TdlibService.instance.lastError ??
+            'TDLib недоступна на этой платформе.',
+      );
     }
 
-    if (_authorizationType == 'authorizationStateReady') {
+    // Strict tree boundary: MainScreen is not constructed until TDLib Ready.
+    if (isAuthorized &&
+        _authorizationType == 'authorizationStateReady') {
       return const MainScreen();
     }
 
@@ -131,6 +135,7 @@ class _AuthorizationGateState extends State<AuthorizationGate> {
       'authorizationStateWaitPremiumPurchase',
       'authorizationStateClosed',
     };
+
     if (_authorizationType != null && authStates.contains(_authorizationType)) {
       return const TelegramConnectPage();
     }
@@ -238,7 +243,9 @@ class SettingsPage extends StatelessWidget {
         _SettingsRow(
           icon: Icons.data_usage,
           title: 'Данные и память',
-          onTap: () => _showUnavailable(context, 'Данные и память', 'Раздел пока не подключён к настройкам TDLib.'),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => const DataMemoryPage(),
+          )),
         ),
         _SettingsRow(
           icon: Icons.devices,

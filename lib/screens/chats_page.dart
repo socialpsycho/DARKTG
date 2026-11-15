@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../main.dart' show accent, darkSurface;
 import '../services/tdlib_service.dart';
+import '../services/cache_service.dart';
 import 'chat_conversation_page.dart';
 
 class ChatsPage extends StatefulWidget {
@@ -154,9 +155,12 @@ class _ChatsPageState extends State<ChatsPage> {
               final title = chat['title']?.toString() ?? 'Чат';
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-                leading: CircleAvatar(radius: 27, backgroundColor: accent.withValues(alpha: .18),
-                  child: Text(title.isNotEmpty ? title.characters.first.toUpperCase() : 'D',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                leading: CacheService.instance.avatar(
+                  imageUrl: CacheService.instance.imageUrlFromChat(chat),
+                  localPath: CacheService.instance.localPathFromChat(chat),
+                  fallbackText: title,
+                  radius: 27,
+                ),
                 title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600)),
                 subtitle: Text(_lastMessage(chat), maxLines: 1, overflow: TextOverflow.ellipsis),

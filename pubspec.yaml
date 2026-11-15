@@ -13,6 +13,7 @@ dependencies:
   handy_tdlib_next: ^2.3.16
   path_provider: ^2.1.5
   shared_preferences: ^2.3.5
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:
