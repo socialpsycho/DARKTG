@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart';
 import 'package:handy_tdlib_next/handy_tdlib_next.dart';
 import 'package:path_provider/path_provider.dart';
 import '../core/telegram/config.dart';
@@ -64,8 +65,14 @@ class TdlibService {
     } catch (error) {
       _status = TdlibEngineStatus.failed;
       _lastError = error.toString();
-      rethrow;
+      debugPrint('[DARKTG][TDLib] Initialization failed: $_lastError');
+      _events.add({'@type': 'darktgTdlibError', 'message': _lastError});
     }
+  }
+
+  Future<void> retryInitialization() async {
+    dispose();
+    await initialize();
   }
 
   void _handleWorkerMessage(dynamic message) {
@@ -87,6 +94,7 @@ class TdlibService {
         final completer = _pendingRequests.remove(extra);
         if (completer != null) {
           if (decoded['@type'] == 'error') {
+            debugPrint('[DARKTG][TDLib] TdError: ${decoded['message'] ?? decoded}');
             completer.completeError(StateError(decoded['message']?.toString() ?? 'TDLib request failed'));
           } else {
             completer.complete(decoded);
@@ -100,6 +108,7 @@ class TdlibService {
           return;
         }
           if (decoded['@type'] == 'updateAuthorizationState') {
+            debugPrint('[DARKTG][TDLib] updateAuthorizationState: ${decoded['authorization_state']}');
             final auth = decoded['authorization_state'];
             if (auth is Map) {
               _lastAuthorizationState = Map<String, dynamic>.from(auth);
@@ -215,15 +224,19 @@ class TdlibService {
       await configureFromBuild();
       _events.add({'@type': 'darktgTdlibParametersConfigured'});
     } catch (error) {
+      final message = 'Не удалось настроить TDLib: $error';
+      _lastError = message;
+      debugPrint('[DARKTG][TDLib] setTdlibParameters failed: $message');
       _events.add({
-        '@type': 'error',
-        'message': 'Не удалось настроить TDLib: $error',
+        '@type': 'darktgTdlibStartupError',
+        'message': message,
       });
     }
   }
 
   void _handleTdlibError(Map<String, dynamic> error) {
     final message = error['message']?.toString() ?? 'Неизвестная ошибка TDLib';
+    debugPrint('[DARKTG][TDLib] TdError: $message');
     final pattern = RegExp(
       r'(?:FLOOD_WAIT_|retry after\s+)(\d+)',
       caseSensitive: false,
@@ -272,7 +285,7 @@ class TdlibService {
     final files = Directory('${root.path}/files');
     await root.create(recursive: true);
     await files.create(recursive: true);
-    sendRawRequest({
+    await requestRaw({
       '@type': 'setTdlibParameters',
       'database_directory': root.path,
       'files_directory': files.path,
@@ -343,6 +356,7 @@ class TdlibService {
     _receivePort?.close();
     _isolate?.kill(priority: Isolate.immediate);
     _status = TdlibEngineStatus.notStarted;
+    _lastError = null;
     _parametersConfigured = false;
     _lastAuthorizationState = null;
     _floodWaitUntil = null;
