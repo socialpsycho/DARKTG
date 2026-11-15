@@ -15,7 +15,7 @@ class TdlibService {
   static final TdlibService instance = TdlibService._();
 
   static const int buildApiId = Config.apiId;
-  static const String buildApiHash = TelegramApiConfig.apiHash;
+  static const String buildApiHash = Config.apiHash;
   static bool get hasBuildCredentials =>
       buildApiId > 0 && buildApiHash.isNotEmpty;
 
@@ -126,9 +126,9 @@ class TdlibService {
       await configure(
         apiId: buildApiId,
         apiHash: buildApiHash,
-        systemLanguageCode: TelegramApiConfig.systemLanguageCode,
-        deviceModel: TelegramApiConfig.deviceModel,
-        applicationVersion: TelegramApiConfig.applicationVersion,
+        systemLanguageCode: Config.systemLanguageCode,
+        deviceModel: Config.deviceModel,
+        applicationVersion: Config.applicationVersion,
       );
     } catch (_) {
       _parametersConfigured = false;
