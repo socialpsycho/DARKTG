@@ -101,22 +101,60 @@ class TdlibService {
           if (decoded['@type'] == 'updateAuthorizationState' &&
               auth is Map && auth['@type'] == 'authorizationStateReady' &&
               GhostModeService.instance.hideOnlineStatus && isReady) {
-            sendRawRequest({
-              '@type': 'setOption',
-              'name': 'online',
-              'value': {'@type': 'optionValueBoolean', 'value': false},
-            });
+            setOnline(false);
           }
         }
       } catch (_) {}
     }
   }
 
+  /// Sends a TDLib JSON request after applying the global Ghost Mode policy.
+  /// All outbound requests must pass through this method.
   void sendRawRequest(Map<String, dynamic> request) {
     if (GhostModeService.instance.shouldSuppress(request)) return;
     final port = _workerPort;
     if (!isReady || port == null) throw StateError('TDLib is not ready.');
     port.send({'type': 'send', 'request': request});
+  }
+
+  /// TDLib JSON wrapper for SendChatAction / ChatActionTyping.
+  /// The central request filter prevents the signal leaving this device
+  /// whenever Ghost Mode's typing protection is enabled.
+  void sendChatAction({
+    required int chatId,
+    required Map<String, dynamic> action,
+  }) {
+    sendRawRequest({
+      '@type': 'sendChatAction',
+      'chat_id': chatId,
+      'action': action,
+    });
+  }
+
+  /// TDLib JSON wrapper for ViewMessages. It is suppressed centrally when
+  /// the read-receipt protection is enabled.
+  void viewMessages({
+    required int chatId,
+    required List<int> messageIds,
+    bool forceRead = false,
+  }) {
+    if (messageIds.isEmpty) return;
+    sendRawRequest({
+      '@type': 'viewMessages',
+      'chat_id': chatId,
+      'message_ids': messageIds,
+      'force_read': forceRead,
+    });
+  }
+
+  /// TDLib does not expose a SetOnline request. Its online signal is the
+  /// "online" option; the central filter blocks attempts to set it to true.
+  void setOnline(bool online) {
+    sendRawRequest({
+      '@type': 'setOption',
+      'name': 'online',
+      'value': {'@type': 'optionValueBoolean', 'value': online},
+    });
   }
 
   Future<void> configureFromBuild() async {
